@@ -1,15 +1,21 @@
 name: Ingest Data
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'ingest/**'
+  # Manual trigger only - ingestion should be run deliberately
   workflow_dispatch:
+    inputs:
+      qdrant_url:
+        description: 'Qdrant URL (e.g., http://localhost:6333 or https://your-qdrant-cloud.io)'
+        required: true
+        default: 'http://localhost:6333'
+      collection_name:
+        description: 'Qdrant collection name'
+        required: false
+        default: 'planes_gobierno'
 
 jobs:
-  ingest:
+  validate:
+    name: Validate & Lint
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -25,14 +31,55 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: "ingest/pyproject.toml"
+          python-version-file: "ingest/.python-version"
 
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync
+
+      - name: Check imports
+        run: |
+          uv run python -c "import ingest; print('✅ Imports successful')"
+
+  ingest:
+    name: Run Ingestion
+    runs-on: ubuntu-latest
+    needs: validate
+    defaults:
+      run:
+        working-directory: ./ingest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "ingest/.python-version"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Verify secrets
+        run: |
+          if [ -z "${{ secrets.QDRANT_API_KEY }}" ]; then
+            echo "⚠️  QDRANT_API_KEY not set (OK for local Qdrant)"
+          else
+            echo "✅ QDRANT_API_KEY is configured"
+          fi
+          echo "Using Qdrant URL: ${{ github.event.inputs.qdrant_url }}"
 
       - name: Run Ingestion
         env:
-          QDRANT_URL: ${{ secrets.QDRANT_URL }}
+          QDRANT_URL: ${{ github.event.inputs.qdrant_url }}
           QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
-          QDRANT_COLLECTION: "planes_gobierno"
-        run: uv run main.py
+          QDRANT_COLLECTION: ${{ github.event.inputs.collection_name }}
+        run: |
+          echo "🚀 Starting ingestion to Qdrant..."
+          echo "Collection: $QDRANT_COLLECTION"
+          echo "URL: $QDRANT_URL"
+          uv run main.py
+          echo "✅ Ingestion completed successfully"
