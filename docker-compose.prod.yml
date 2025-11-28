@@ -1,0 +1,112 @@
+version: "3.8"
+
+# docker-compose.prod.yml
+# Uso:
+# 1) Construir imágenes previamente (o usar CI/CD y un registry):
+#    docker build -t eleccionescr2026-backend ./backend-py
+#    docker build -t eleccionescr2026-frontend ./frontend
+#    docker build -t eleccionescr2026-ingest ./ingest   # sólo para runs puntuales
+# 2) Ejecutar producción (sin ingest):
+#    docker compose -f docker-compose.prod.yml up -d qdrant backend frontend
+# 3) Ejecutar ingest cuando haya nuevos datos:
+#    docker compose -f docker-compose.prod.yml run --rm ingest
+# 4) (Opcional) Usar un reverse proxy externo (Nginx / Traefik) y quitar el mapeo de puertos directos.
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    # En producción normalmente NO se exponen puertos públicamente.
+    # Si necesitas acceso HTTP administrativo remoto, descomenta:
+    # ports:
+    #   - "6333:6333"
+    #   - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  backend:
+    image: eleccionescr2026-backend:latest
+    restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    environment:
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      QDRANT_URL: http://qdrant:6333
+      PORT: 8000
+      GOOGLE_MODEL: ${GOOGLE_MODEL:-gemini-2.0-flash-exp}
+    # No se publica el puerto directamente si hay reverse proxy:
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - internal
+    # Recursos (ajustar según necesidad):
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  frontend:
+    image: eleccionescr2026-frontend:latest
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:8000
+    # Normalmente sí se expone HTTP para el sitio público
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - internal
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  ingest:
+    image: eleccionescr2026-ingest:latest
+    # No se levanta automáticamente en producción, se ejecuta bajo demanda.
+    profiles: ["manual"]
+    environment:
+      QDRANT_URL: http://qdrant:6333
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    networks:
+      - internal
+    entrypoint: ["python", "main.py"]
+    # No restart, es un job.
+    restart: "no"
+
+volumes:
+  qdrant_data:
+    driver: local
+
+networks:
+  internal:
+    driver: bridge

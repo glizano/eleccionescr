@@ -1,0 +1,27 @@
+.venv
+__pycache__/
+*.py[oc]
+*.pyo
+*.pyc
+.env
+*.log
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+
+# Ruff
+.ruff_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker compose local override
+docker-compose.override.yml

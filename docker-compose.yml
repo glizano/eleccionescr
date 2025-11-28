@@ -1,0 +1,102 @@
+services:
+  # Qdrant Vector Database - Shared by all services
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend-py
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PORT=8000
+      - DEBUG=true
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    volumes:
+      # Mount code for development (comment out for production)
+      - ./backend-py/app:/app/app
+      - ./backend-py/main.py:/app/main.py
+      - ./backend-py/run.py:/app/run.py
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - app-network
+    environment:
+      - BACKEND_URL=http://backend:8000
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Ingest Service (runs once to populate vector database)
+  ingest:
+    build:
+      context: ./ingest
+      dockerfile: Dockerfile
+    container_name: ingest
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - ./ingest/data:/app/data
+      - ./ingest/qdrant_storage:/app/qdrant_storage
+    networks:
+      - app-network
+    # This service will run and exit, or remove 'command' below to keep it running
+    entrypoint: ["python", "main.py"]
+    restart: "no"
+
+volumes:
+  qdrant_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,81 @@
+---
+interface Props {
+  partido: string;
+  text: string;
+  filename: string;
+  score: number;
+}
+
+const { partido, text, filename, score } = Astro.props;
+---
+
+<div class="source-card">
+  <div class="source-header">
+    <span class="partido-badge">{partido}</span>
+    <span class="score-badge">Relevancia: {(score * 100).toFixed(0)}%</span>
+  </div>
+  <p class="source-text">{text}</p>
+  <div class="source-footer">
+    <span class="source-file">📄 {filename}</span>
+  </div>
+</div>
+
+<style>
+  .source-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+    font-size: 0.85rem;
+    transition: transform 0.2s;
+  }
+
+  .source-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-color);
+  }
+
+  .source-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .partido-badge {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    border: 1px solid var(--border-color);
+  }
+
+  .score-badge {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+  }
+
+  .source-text {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .source-footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .source-file {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-style: italic;
+  }
+</style>

@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+*.pyo
+*.pyc
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# environment variables
+.env
+
+# Qdrant storage
+qdrant_storage/
+*.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
