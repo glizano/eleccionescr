@@ -1,10 +1,11 @@
 import logging
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
 from app.agents.classifier import classify_intent, extract_parties
 from app.services.embeddings import generate_embedding
+from app.services.langfuse_service import langfuse_trace
 from app.services.llm import generate_text
 from app.services.qdrant import search_qdrant
 
@@ -21,6 +22,7 @@ class AgentState(TypedDict):
     answer: str
     sources: list
     steps: list[str]  # Track execution steps
+    langfuse_trace: Any  # Langfuse trace for observability
 
 
 def classify_intent_node(state: AgentState) -> AgentState:
@@ -148,7 +150,10 @@ Pregunta: {state["question"]}"""
     try:
         logger.info(f"[Agent] Invoking LLM with {len(state['contexts'])} contexts...")
         logger.info(f"[Agent] Intent: {state['intent']}")
-        answer = generate_text(prompt)
+
+        # Pass Langfuse trace to LLM for observability
+        trace = state.get("langfuse_trace")
+        answer = generate_text(prompt, langfuse_trace=trace)
 
         logger.info(f"[Agent] Generated answer length: {len(answer)}")
         logger.info(f"[Agent] Answer preview: {answer[:200]}")
@@ -230,26 +235,52 @@ def build_agent_graph():
 agent_graph = build_agent_graph()
 
 
-def run_agent(question: str) -> dict:
+def run_agent(question: str, session_id: str | None = None) -> dict:
     """
     Run the agent graph with a question
 
+    Args:
+        question: The user's question
+        session_id: Optional session ID for tracking
+
     Returns: Final state with answer, sources, and trace
     """
-    initial_state = {
-        "question": question,
-        "intent": "",
-        "parties": [],
-        "contexts": [],
-        "answer": "",
-        "sources": [],
-        "steps": [],
-    }
-
     logger.info(f"[Agent] Starting workflow for question: {question[:100]}...")
 
-    # Run the graph
-    final_state = agent_graph.invoke(initial_state)
+    # Create Langfuse trace for observability
+    with langfuse_trace(
+        name="agent-workflow",
+        session_id=session_id,
+        metadata={"question_length": len(question)},
+    ) as trace:
+        initial_state = {
+            "question": question,
+            "intent": "",
+            "parties": [],
+            "contexts": [],
+            "answer": "",
+            "sources": [],
+            "steps": [],
+            "langfuse_trace": trace,
+        }
+
+        # Run the graph
+        final_state = agent_graph.invoke(initial_state)
+
+        # Update Langfuse trace with final workflow results (for analytics/debugging)
+        if trace:
+            try:
+                trace.update(
+                    output={
+                        "answer_length": len(final_state.get("answer", "")),
+                        "sources_count": len(final_state.get("sources", [])),
+                        "intent": final_state.get("intent", ""),
+                        "parties_detected": final_state.get("parties", []),
+                        "steps": final_state.get("steps", []),
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Failed to update Langfuse trace: {e}")
 
     logger.info(f"[Agent] Workflow completed. Steps: {final_state['steps']}")
 
