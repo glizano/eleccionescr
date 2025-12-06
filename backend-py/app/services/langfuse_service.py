@@ -80,7 +80,7 @@ def langfuse_trace(
             name=name,
             user_id=user_id,
             session_id=session_id,
-            metadata=metadata or {},
+            metadata=metadata if metadata is not None else {},
         )
         yield trace
     except Exception as e:
@@ -126,7 +126,7 @@ def create_generation(
             model=model,
             input=input_text,
             output=output_text,
-            metadata=metadata or {},
+            metadata=metadata if metadata is not None else {},
         )
         return generation
     except Exception as e:

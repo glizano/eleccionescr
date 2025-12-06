@@ -85,7 +85,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
         if not output_text:
             output_text = "No se pudo generar una respuesta válida."
 
-        # Update Langfuse generation with output
+        # Update Langfuse generation with output (signals completion of this generation)
         if generation:
             try:
                 generation.end(output=output_text)
