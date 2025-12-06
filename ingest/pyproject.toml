@@ -8,4 +8,5 @@ dependencies = [
     "pypdf>=6.4.0",
     "qdrant-client>=1.16.1",
     "sentence-transformers>=5.1.2",
+    "openai>=1.59.0",
 ]
