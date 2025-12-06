@@ -151,10 +151,31 @@ Variables en `.env`:
 
 ```bash
 QDRANT_URL=http://localhost:6333
-GOOGLE_API_KEY=tu_key_aqui
 PORT=8000
 DEBUG=true
+
+# LLM Provider Selection: "google" or "openai"
+LLM_PROVIDER=google
+
+# Google AI (required if LLM_PROVIDER=google)
+GOOGLE_API_KEY=tu_key_aqui
+GOOGLE_MODEL=gemini-2.5-flash
+
+# OpenAI (required if LLM_PROVIDER=openai)
+OPENAI_API_KEY=tu_openai_key_aqui
+OPENAI_MODEL=gpt-4o-mini
 ```
+
+### Proveedores de LLM Soportados
+
+El sistema soporta múltiples proveedores de LLM:
+
+| Proveedor | Variable de entorno | Modelos disponibles |
+|-----------|---------------------|---------------------|
+| Google Gemini | `LLM_PROVIDER=google` | gemini-2.5-flash (default), gemini-1.5-pro, etc. |
+| OpenAI | `LLM_PROVIDER=openai` | gpt-4o-mini (default), gpt-4o, gpt-4-turbo, etc. |
+
+Para cambiar de proveedor, simplemente modifica `LLM_PROVIDER` en tu archivo `.env` y proporciona la API key correspondiente.
 
 ## 📊 Ventajas vs Versión Anterior
 
