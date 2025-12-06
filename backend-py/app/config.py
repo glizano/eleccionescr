@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings
 
 
@@ -10,6 +12,11 @@ class Settings(BaseSettings):
     # LLM
     google_api_key: str
     google_model: str = "gemini-1.5-flash"
+
+    # Embeddings
+    embedding_provider: Literal["sentence_transformers", "openai"] = "sentence_transformers"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    openai_api_key: str = ""
 
     # Server
     host: str = "0.0.0.0"
