@@ -57,10 +57,11 @@ class OpenAIProvider(EmbeddingProvider):
         from openai import OpenAI
 
         self.model_name = model_name
-        api_key = api_key or settings.openai_api_key
-        if not api_key:
+        # Handle both None and empty string cases
+        resolved_api_key = api_key if api_key else settings.openai_api_key
+        if not resolved_api_key:
             raise ValueError("OpenAI API key is required for OpenAI embedding provider")
-        self.client = OpenAI(api_key=api_key)
+        self.client = OpenAI(api_key=resolved_api_key)
         logger.info(f"Initialized OpenAI embedding provider with model: {model_name}")
 
     def get_embedding_dimension(self) -> int:

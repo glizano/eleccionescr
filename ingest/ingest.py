@@ -69,10 +69,11 @@ class OpenAIProvider(EmbeddingProvider):
         from openai import OpenAI
 
         self.model_name = model_name
-        api_key = api_key or OPENAI_API_KEY
-        if not api_key:
+        # Handle both None and empty string cases
+        resolved_api_key = api_key if api_key else OPENAI_API_KEY
+        if not resolved_api_key:
             raise ValueError("OpenAI API key is required for OpenAI embedding provider")
-        self.client = OpenAI(api_key=api_key)
+        self.client = OpenAI(api_key=resolved_api_key)
         logger.info(f"Initialized OpenAI embedding provider with model: {model_name}")
 
     def get_embedding_dimension(self) -> int:
@@ -85,8 +86,17 @@ class OpenAIProvider(EmbeddingProvider):
         return [data.embedding for data in response.data]
 
 
+# Lazy initialization for embedding provider
+_embed_provider = None
+_vector_dim = None
+
+
 def get_embedding_provider() -> EmbeddingProvider:
-    """Get the configured embedding provider"""
+    """Get the configured embedding provider (lazy initialization)"""
+    global _embed_provider
+    if _embed_provider is not None:
+        return _embed_provider
+
     model_name = EMBEDDING_MODEL
 
     if EMBEDDING_PROVIDER == "openai":
@@ -94,15 +104,21 @@ def get_embedding_provider() -> EmbeddingProvider:
         # or the configured model doesn't match OpenAI format
         if model_name.startswith("sentence-transformers/"):
             model_name = "text-embedding-3-small"
-        return OpenAIProvider(model_name=model_name)
+        _embed_provider = OpenAIProvider(model_name=model_name)
     else:
         # Default to sentence-transformers
-        return SentenceTransformersProvider(model_name=model_name)
+        _embed_provider = SentenceTransformersProvider(model_name=model_name)
+
+    return _embed_provider
 
 
-# Initialize embedding provider
-EMBED_PROVIDER = get_embedding_provider()
-VECTOR_DIM = EMBED_PROVIDER.get_embedding_dimension()
+def get_vector_dimension() -> int:
+    """Get the vector dimension for the configured embedding provider"""
+    global _vector_dim
+    if _vector_dim is not None:
+        return _vector_dim
+    _vector_dim = get_embedding_provider().get_embedding_dimension()
+    return _vector_dim
 
 # ---------- Helpers ----------
 def sha256_file(path: Path):
@@ -154,7 +170,7 @@ def init_qdrant():
     if COLLECTION not in collections:
         qc.create_collection(
             collection_name=COLLECTION,
-            vectors_config=VectorParams(size=VECTOR_DIM, distance=Distance.COSINE)
+            vectors_config=VectorParams(size=get_vector_dimension(), distance=Distance.COSINE)
         )
         print("Created collection", COLLECTION)
     return qc
@@ -178,7 +194,8 @@ def delete_doc_points(qc: QdrantClient, doc_id: str):
         print("Delete error:", e)
 
 def upsert_chunks(qc: QdrantClient, chunks, doc_id, filename, partido, file_hash):
-    embeddings = EMBED_PROVIDER.encode(chunks)
+    provider = get_embedding_provider()
+    embeddings = provider.encode(chunks)
     points = []
     for i, (chunk, vec) in enumerate(zip(chunks, embeddings)):
         pid = str(uuid.uuid4())
