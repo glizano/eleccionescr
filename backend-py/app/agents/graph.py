@@ -267,7 +267,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict:
         # Run the graph
         final_state = agent_graph.invoke(initial_state)
 
-        # Update trace with final results if available
+        # Update Langfuse trace with final workflow results (for analytics/debugging)
         if trace:
             try:
                 trace.update(
