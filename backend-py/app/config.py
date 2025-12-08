@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     google_model: str = "gemini-2.5-flash"
     google_safety_threshold: Literal[
-        "OFF", "BLOCK_NONE", "BLOCK_ONLY_HIGH", "BLOCK_MEDIUM_AND_ABOVE", "BLOCK_LOW_AND_ABOVE"
+        "BLOCK_NONE", "BLOCK_ONLY_HIGH", "BLOCK_MEDIUM_AND_ABOVE", "BLOCK_LOW_AND_ABOVE"
     ] = "BLOCK_MEDIUM_AND_ABOVE"
 
     # OpenAI LLM
