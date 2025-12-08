@@ -11,11 +11,12 @@ services:
     environment:
       - QDRANT__SERVICE__GRPC_PORT=6334
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 10s
+      test:
+        - CMD-SHELL
+        - bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 3
     restart: unless-stopped
     networks:
       - app-network
