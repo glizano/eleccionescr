@@ -1,16 +1,22 @@
 """
-Base LLM Provider interface.
-
-All LLM providers must implement this interface.
+Base LLM Provider using LangChain abstractions.
 """
 
-from abc import ABC, abstractmethod
+from langchain_core.language_models import BaseChatModel
 
 
-class LLMProvider(ABC):
-    """Abstract base class for LLM providers."""
+class LLMProvider:
+    """Wrapper for LangChain chat models."""
 
-    @abstractmethod
+    def __init__(self, chat_model: BaseChatModel):
+        """
+        Initialize the provider with a LangChain chat model.
+
+        Args:
+            chat_model: A LangChain BaseChatModel instance.
+        """
+        self._chat_model = chat_model
+
     def generate_text(self, prompt: str) -> str:
         """
         Generate text from a prompt.
@@ -21,10 +27,13 @@ class LLMProvider(ABC):
         Returns:
             The generated text response.
         """
-        pass
+        try:
+            response = self._chat_model.invoke(prompt)
+            return response.content
+        except Exception as e:
+            return f"Error al generar respuesta: {str(e)}"
 
     @property
-    @abstractmethod
     def model_name(self) -> str:
         """Return the name of the model being used."""
-        pass
+        return getattr(self._chat_model, "model_name", str(type(self._chat_model).__name__))

@@ -1,93 +1,59 @@
 """
-Google Gemini LLM Provider.
+Google Gemini LLM Provider using LangChain.
 """
 
 import logging
 
-from google import genai
-from google.genai import types
+from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
 
 from app.services.llm_providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
+# Map config string to LangChain enum
+SAFETY_THRESHOLD_MAP = {
+    "BLOCK_NONE": HarmBlockThreshold.BLOCK_NONE,
+    "BLOCK_ONLY_HIGH": HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    "BLOCK_MEDIUM_AND_ABOVE": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    "BLOCK_LOW_AND_ABOVE": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+}
 
-class GoogleProvider(LLMProvider):
-    """Google Gemini LLM provider."""
 
-    def __init__(
-        self,
-        api_key: str,
-        model: str = "gemini-2.5-flash",
-        safety_threshold: str = "BLOCK_MEDIUM_AND_ABOVE",
-    ):
-        """
-        Initialize the Google Gemini provider.
+def create_google_provider(
+    api_key: str,
+    model: str = "gemini-2.5-flash",
+    safety_threshold: str = "BLOCK_MEDIUM_AND_ABOVE",
+) -> LLMProvider:
+    """
+    Create a Google Gemini provider using LangChain.
 
-        Args:
-            api_key: Google API key.
-            model: Model name to use (default: gemini-2.5-flash).
-            safety_threshold: Safety filter threshold (default: BLOCK_MEDIUM_AND_ABOVE).
-        """
-        self._api_key = api_key
-        self._model = model
-        self._safety_threshold = safety_threshold
-        self._client = genai.Client(api_key=api_key)
+    Args:
+        api_key: Google API key.
+        model: Model name to use (default: gemini-2.5-flash).
+        safety_threshold: Safety filter threshold (default: BLOCK_MEDIUM_AND_ABOVE).
 
-    @property
-    def model_name(self) -> str:
-        """Return the name of the model being used."""
-        return self._model
+    Returns:
+        LLMProvider instance wrapping ChatGoogleGenerativeAI.
+    """
+    threshold = SAFETY_THRESHOLD_MAP.get(
+        safety_threshold, HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+    )
 
-    def generate_text(self, prompt: str) -> str:
-        """Generate text using Google Gemini."""
-        try:
-            response = self._client.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.2,
-                    max_output_tokens=2048,
-                    safety_settings=[
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_HATE_SPEECH", threshold=self._safety_threshold
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                            threshold=self._safety_threshold,
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_HARASSMENT", threshold=self._safety_threshold
-                        ),
-                        types.SafetySetting(
-                            category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            threshold=self._safety_threshold,
-                        ),
-                    ],
-                ),
-            )
+    # Configure safety settings for all harm categories
+    safety_settings = {
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: threshold,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: threshold,
+        HarmCategory.HARM_CATEGORY_HARASSMENT: threshold,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: threshold,
+    }
 
-            logger.info(
-                f"LLM finish_reason: {response.candidates[0].finish_reason if response.candidates else 'NO_CANDIDATES'}"
-            )
+    chat_model = ChatGoogleGenerativeAI(
+        model=model,
+        google_api_key=api_key,
+        temperature=0.2,
+        max_output_tokens=2048,
+        safety_settings=safety_settings,
+    )
 
-            # Get the text from response
-            if response.candidates and len(response.candidates) > 0:
-                candidate = response.candidates[0]
-                if candidate.content and candidate.content.parts:
-                    text = "".join(
-                        part.text for part in candidate.content.parts if hasattr(part, "text")
-                    )
-                    if text:
-                        logger.info(f"Generated text length: {len(text)}")
-                        return text
-
-            # Fallback: try response.text
-            if hasattr(response, "text") and response.text:
-                return response.text
-
-            return "No se pudo generar una respuesta válida."
-
-        except Exception as e:
-            logger.error(f"Error generating text with Google Gemini: {e}", exc_info=True)
-            return f"Error al generar respuesta: {str(e)}"
+    logger.info(f"Created Google Gemini provider with model: {model}, safety: {safety_threshold}")
+    return LLMProvider(chat_model)

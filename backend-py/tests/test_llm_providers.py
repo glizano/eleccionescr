@@ -1,5 +1,5 @@
 """
-Tests for LLM providers.
+Tests for LLM providers using LangChain abstractions.
 """
 
 from unittest.mock import MagicMock, patch
@@ -8,167 +8,156 @@ import pytest
 
 from app.services.llm_providers.base import LLMProvider
 from app.services.llm_providers.factory import create_llm_provider
-from app.services.llm_providers.google_provider import GoogleProvider
-from app.services.llm_providers.openai_provider import OpenAIProvider
 
 
-class TestLLMProviderInterface:
-    """Test the LLM provider interface."""
+class TestLLMProviderWrapper:
+    """Test the LLM provider wrapper."""
 
-    def test_llm_provider_is_abstract(self):
-        """Test that LLMProvider cannot be instantiated directly."""
-        with pytest.raises(TypeError):
-            LLMProvider()
+    def test_llm_provider_wraps_chat_model(self):
+        """Test that LLMProvider wraps a chat model correctly."""
+        mock_chat_model = MagicMock()
+        mock_chat_model.model_name = "test-model"
+        mock_response = MagicMock()
+        mock_response.content = "Test response"
+        mock_chat_model.invoke.return_value = mock_response
 
-    def test_provider_must_implement_generate_text(self):
-        """Test that providers must implement generate_text method."""
+        provider = LLMProvider(mock_chat_model)
 
-        class IncompleteProvider(LLMProvider):
-            @property
-            def model_name(self) -> str:
-                return "test"
+        assert provider.model_name == "test-model"
+        result = provider.generate_text("Test prompt")
+        assert result == "Test response"
+        mock_chat_model.invoke.assert_called_once_with("Test prompt")
 
-        with pytest.raises(TypeError):
-            IncompleteProvider()
+    def test_llm_provider_handles_errors(self):
+        """Test that LLMProvider handles errors gracefully."""
+        mock_chat_model = MagicMock()
+        mock_chat_model.invoke.side_effect = Exception("API Error")
 
-    def test_provider_must_implement_model_name(self):
-        """Test that providers must implement model_name property."""
+        provider = LLMProvider(mock_chat_model)
+        result = provider.generate_text("Test prompt")
 
-        class IncompleteProvider(LLMProvider):
-            def generate_text(self, prompt: str) -> str:
-                return "test"
-
-        with pytest.raises(TypeError):
-            IncompleteProvider()
+        assert "Error al generar respuesta" in result
 
 
 class TestGoogleProvider:
-    """Test the Google Gemini provider."""
+    """Test the Google Gemini provider using LangChain."""
 
-    @patch("app.services.llm_providers.google_provider.genai.Client")
-    def test_google_provider_init(self, mock_client):
-        """Test GoogleProvider initialization."""
-        provider = GoogleProvider(
+    @patch("app.services.llm_providers.google_provider.ChatGoogleGenerativeAI")
+    def test_google_provider_creation(self, mock_chat_class):
+        """Test Google provider creation with LangChain."""
+        from app.services.llm_providers.google_provider import create_google_provider
+
+        mock_chat_model = MagicMock()
+        mock_chat_model.model_name = "gemini-2.5-flash"
+        mock_chat_class.return_value = mock_chat_model
+
+        provider = create_google_provider(
             api_key="test_key", model="gemini-2.5-flash", safety_threshold="BLOCK_MEDIUM_AND_ABOVE"
         )
 
-        assert provider.model_name == "gemini-2.5-flash"
-        mock_client.assert_called_once_with(api_key="test_key")
+        assert isinstance(provider, LLMProvider)
+        mock_chat_class.assert_called_once()
+        call_kwargs = mock_chat_class.call_args[1]
+        assert call_kwargs["model"] == "gemini-2.5-flash"
+        assert call_kwargs["google_api_key"] == "test_key"
+        assert call_kwargs["temperature"] == 0.2
+        assert call_kwargs["max_output_tokens"] == 2048
 
-    @patch("app.services.llm_providers.google_provider.genai.Client")
-    def test_google_provider_generate_text_success(self, mock_client):
-        """Test successful text generation with Google provider."""
-        # Setup mock response
-        mock_part = MagicMock()
-        mock_part.text = "Generated response"
-
-        mock_content = MagicMock()
-        mock_content.parts = [mock_part]
-
-        mock_candidate = MagicMock()
-        mock_candidate.content = mock_content
-        mock_candidate.finish_reason = "STOP"
+    @patch("app.services.llm_providers.google_provider.ChatGoogleGenerativeAI")
+    def test_google_provider_generate_text(self, mock_chat_class):
+        """Test text generation with Google provider."""
+        from app.services.llm_providers.google_provider import create_google_provider
 
         mock_response = MagicMock()
-        mock_response.candidates = [mock_candidate]
+        mock_response.content = "Generated response"
 
-        mock_client_instance = MagicMock()
-        mock_client_instance.models.generate_content.return_value = mock_response
-        mock_client.return_value = mock_client_instance
+        mock_chat_model = MagicMock()
+        mock_chat_model.invoke.return_value = mock_response
+        mock_chat_class.return_value = mock_chat_model
 
-        provider = GoogleProvider(api_key="test_key")
+        provider = create_google_provider(api_key="test_key")
         result = provider.generate_text("Test prompt")
 
         assert result == "Generated response"
-
-    @patch("app.services.llm_providers.google_provider.genai.Client")
-    def test_google_provider_generate_text_error(self, mock_client):
-        """Test error handling in Google provider."""
-        mock_client_instance = MagicMock()
-        mock_client_instance.models.generate_content.side_effect = Exception("API Error")
-        mock_client.return_value = mock_client_instance
-
-        provider = GoogleProvider(api_key="test_key")
-        result = provider.generate_text("Test prompt")
-
-        assert "Error al generar respuesta" in result
+        mock_chat_model.invoke.assert_called_once_with("Test prompt")
 
 
 class TestOpenAIProvider:
-    """Test the OpenAI provider."""
+    """Test the OpenAI provider using LangChain."""
 
-    @patch("app.services.llm_providers.openai_provider.OpenAI")
-    def test_openai_provider_init(self, mock_openai):
-        """Test OpenAIProvider initialization."""
-        provider = OpenAIProvider(api_key="test_key", model="gpt-4o-mini")
+    @patch("app.services.llm_providers.openai_provider.ChatOpenAI")
+    def test_openai_provider_creation(self, mock_chat_class):
+        """Test OpenAI provider creation with LangChain."""
+        from app.services.llm_providers.openai_provider import create_openai_provider
 
-        assert provider.model_name == "gpt-4o-mini"
-        mock_openai.assert_called_once_with(api_key="test_key")
+        mock_chat_model = MagicMock()
+        mock_chat_model.model_name = "gpt-4o-mini"
+        mock_chat_class.return_value = mock_chat_model
 
-    @patch("app.services.llm_providers.openai_provider.OpenAI")
-    def test_openai_provider_generate_text_success(self, mock_openai):
-        """Test successful text generation with OpenAI provider."""
-        # Setup mock response
-        mock_message = MagicMock()
-        mock_message.content = "Generated response"
+        provider = create_openai_provider(api_key="test_key", model="gpt-4o-mini")
 
-        mock_choice = MagicMock()
-        mock_choice.message = mock_message
+        assert isinstance(provider, LLMProvider)
+        mock_chat_class.assert_called_once()
+        call_kwargs = mock_chat_class.call_args[1]
+        assert call_kwargs["model"] == "gpt-4o-mini"
+        assert call_kwargs["api_key"] == "test_key"
+        assert call_kwargs["temperature"] == 0.2
+        assert call_kwargs["max_tokens"] == 2048
+
+    @patch("app.services.llm_providers.openai_provider.ChatOpenAI")
+    def test_openai_provider_generate_text(self, mock_chat_class):
+        """Test text generation with OpenAI provider."""
+        from app.services.llm_providers.openai_provider import create_openai_provider
 
         mock_response = MagicMock()
-        mock_response.choices = [mock_choice]
+        mock_response.content = "Generated response"
 
-        mock_client_instance = MagicMock()
-        mock_client_instance.chat.completions.create.return_value = mock_response
-        mock_openai.return_value = mock_client_instance
+        mock_chat_model = MagicMock()
+        mock_chat_model.invoke.return_value = mock_response
+        mock_chat_class.return_value = mock_chat_model
 
-        provider = OpenAIProvider(api_key="test_key")
+        provider = create_openai_provider(api_key="test_key")
         result = provider.generate_text("Test prompt")
 
         assert result == "Generated response"
-
-    @patch("app.services.llm_providers.openai_provider.OpenAI")
-    def test_openai_provider_generate_text_error(self, mock_openai):
-        """Test error handling in OpenAI provider."""
-        mock_client_instance = MagicMock()
-        mock_client_instance.chat.completions.create.side_effect = Exception("API Error")
-        mock_openai.return_value = mock_client_instance
-
-        provider = OpenAIProvider(api_key="test_key")
-        result = provider.generate_text("Test prompt")
-
-        assert "Error al generar respuesta" in result
+        mock_chat_model.invoke.assert_called_once_with("Test prompt")
 
 
 class TestProviderFactory:
     """Test the provider factory."""
 
     @patch("app.services.llm_providers.factory.settings")
-    @patch("app.services.llm_providers.google_provider.genai.Client")
-    def test_create_google_provider(self, mock_genai, mock_settings):
-        """Test creating a Google provider."""
+    @patch("app.services.llm_providers.google_provider.ChatGoogleGenerativeAI")
+    def test_create_google_provider(self, mock_chat_class, mock_settings):
+        """Test creating a Google provider via factory."""
         mock_settings.llm_provider = "google"
         mock_settings.google_api_key = "test_key"
         mock_settings.google_model = "gemini-2.5-flash"
         mock_settings.google_safety_threshold = "BLOCK_MEDIUM_AND_ABOVE"
 
+        mock_chat_model = MagicMock()
+        mock_chat_model.model_name = "gemini-2.5-flash"
+        mock_chat_class.return_value = mock_chat_model
+
         provider = create_llm_provider("google")
 
-        assert isinstance(provider, GoogleProvider)
-        assert provider.model_name == "gemini-2.5-flash"
+        assert isinstance(provider, LLMProvider)
 
     @patch("app.services.llm_providers.factory.settings")
-    @patch("app.services.llm_providers.openai_provider.OpenAI")
-    def test_create_openai_provider(self, mock_openai, mock_settings):
-        """Test creating an OpenAI provider."""
+    @patch("app.services.llm_providers.openai_provider.ChatOpenAI")
+    def test_create_openai_provider(self, mock_chat_class, mock_settings):
+        """Test creating an OpenAI provider via factory."""
         mock_settings.llm_provider = "openai"
         mock_settings.openai_api_key = "test_key"
         mock_settings.openai_model = "gpt-4o-mini"
 
+        mock_chat_model = MagicMock()
+        mock_chat_model.model_name = "gpt-4o-mini"
+        mock_chat_class.return_value = mock_chat_model
+
         provider = create_llm_provider("openai")
 
-        assert isinstance(provider, OpenAIProvider)
-        assert provider.model_name == "gpt-4o-mini"
+        assert isinstance(provider, LLMProvider)
 
     @patch("app.services.llm_providers.factory.settings")
     def test_create_provider_missing_google_key(self, mock_settings):

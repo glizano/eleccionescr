@@ -1,5 +1,5 @@
 """
-LLM Provider Factory.
+LLM Provider Factory using LangChain abstractions.
 
 Creates the appropriate LLM provider based on configuration.
 """
@@ -38,9 +38,9 @@ def create_llm_provider(provider_type: LLMProviderType | None = None) -> LLMProv
         if not settings.google_api_key:
             raise ValueError("Google API key is required for Google provider")
 
-        from app.services.llm_providers.google_provider import GoogleProvider
+        from app.services.llm_providers.google_provider import create_google_provider
 
-        return GoogleProvider(
+        return create_google_provider(
             api_key=settings.google_api_key,
             model=settings.google_model,
             safety_threshold=settings.google_safety_threshold,
@@ -50,9 +50,9 @@ def create_llm_provider(provider_type: LLMProviderType | None = None) -> LLMProv
         if not settings.openai_api_key:
             raise ValueError("OpenAI API key is required for OpenAI provider")
 
-        from app.services.llm_providers.openai_provider import OpenAIProvider
+        from app.services.llm_providers.openai_provider import create_openai_provider
 
-        return OpenAIProvider(
+        return create_openai_provider(
             api_key=settings.openai_api_key,
             model=settings.openai_model,
         )

@@ -170,14 +170,22 @@ OPENAI_MODEL=gpt-4o-mini
 
 ### Proveedores de LLM Soportados
 
-El sistema soporta múltiples proveedores de LLM:
+El sistema usa **LangChain** para abstraer los proveedores de LLM, soportando:
 
-| Proveedor | Variable de entorno | Modelos disponibles |
-|-----------|---------------------|---------------------|
-| Google Gemini | `LLM_PROVIDER=google` | gemini-2.5-flash (default), gemini-1.5-pro, etc. |
-| OpenAI | `LLM_PROVIDER=openai` | gpt-4o-mini (default), gpt-4o, gpt-4-turbo, etc. |
+| Proveedor | Variable de entorno | Modelos disponibles | LangChain Class |
+|-----------|---------------------|---------------------|-----------------|
+| Google Gemini | `LLM_PROVIDER=google` | gemini-2.5-flash (default), gemini-1.5-pro, etc. | `ChatGoogleGenerativeAI` |
+| OpenAI | `LLM_PROVIDER=openai` | gpt-4o-mini (default), gpt-4o, gpt-4-turbo, etc. | `ChatOpenAI` |
 
 Para cambiar de proveedor, simplemente modifica `LLM_PROVIDER` en tu archivo `.env` y proporciona la API key correspondiente.
+
+#### Agregar un Nuevo Proveedor
+
+Gracias a las abstracciones de LangChain, es fácil agregar nuevos proveedores (Anthropic Claude, Cohere, etc.):
+
+1. Agrega la dependencia de LangChain para el proveedor (ej: `langchain-anthropic`)
+2. Crea una función `create_provider()` en `app/services/llm_providers/`
+3. Actualiza la factory en `factory.py`
 
 ### Configuración de Seguridad (Google Gemini)
 
