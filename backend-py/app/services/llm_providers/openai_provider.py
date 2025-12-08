@@ -20,7 +20,8 @@ def create_openai_provider(api_key: str, model: str = "gpt-4o-mini") -> LLMProvi
         model: Model name to use (default: gpt-4o-mini).
 
     Returns:
-        LLMProvider instance wrapping ChatOpenAI.
+        LLMProvider instance wrapping ChatOpenAI configured with
+        temperature=0.2 and max_tokens=2048.
     """
     chat_model = ChatOpenAI(
         model=model,

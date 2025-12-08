@@ -31,9 +31,11 @@ def create_google_provider(
         api_key: Google API key.
         model: Model name to use (default: gemini-2.5-flash).
         safety_threshold: Safety filter threshold (default: BLOCK_MEDIUM_AND_ABOVE).
+            Options: BLOCK_NONE, BLOCK_ONLY_HIGH, BLOCK_MEDIUM_AND_ABOVE, BLOCK_LOW_AND_ABOVE.
 
     Returns:
-        LLMProvider instance wrapping ChatGoogleGenerativeAI.
+        LLMProvider instance wrapping ChatGoogleGenerativeAI configured with
+        temperature=0.2, max_output_tokens=2048, and the specified safety settings.
     """
     threshold = SAFETY_THRESHOLD_MAP.get(
         safety_threshold, HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
