@@ -10,15 +10,10 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Global Langfuse client instance
-_langfuse_client = None
-
 
 @lru_cache(maxsize=1)
 def get_langfuse_client():
     """Get Langfuse client (cached). Returns None if Langfuse is disabled."""
-    global _langfuse_client
-
     if not settings.langfuse_enabled:
         logger.info("Langfuse is disabled")
         return None
@@ -30,13 +25,13 @@ def get_langfuse_client():
     try:
         from langfuse import Langfuse
 
-        _langfuse_client = Langfuse(
+        client = Langfuse(
             public_key=settings.langfuse_public_key,
             secret_key=settings.langfuse_secret_key,
             host=settings.langfuse_host,
         )
         logger.info(f"Langfuse client initialized with host: {settings.langfuse_host}")
-        return _langfuse_client
+        return client
     except Exception as e:
         logger.error(f"Failed to initialize Langfuse client: {e}")
         return None
@@ -86,13 +81,6 @@ def langfuse_trace(
     except Exception as e:
         logger.error(f"Error creating Langfuse trace: {e}")
         yield None
-    finally:
-        # Flush to ensure trace is sent
-        try:
-            if client:
-                client.flush()
-        except Exception as e:
-            logger.warning(f"Error flushing Langfuse client: {e}")
 
 
 def create_generation(
@@ -111,7 +99,8 @@ def create_generation(
         name: Name of the generation
         model: Model name used
         input_text: Input prompt text
-        output_text: Output text from the model
+        output_text: Optional output text from the model. This can be provided during
+            creation or later via the generation's `.end(output=output_text)` method.
         metadata: Optional additional metadata
 
     Returns:
