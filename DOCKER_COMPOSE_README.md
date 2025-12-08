@@ -5,6 +5,8 @@ Este archivo `docker-compose.yml` orquesta todos los componentes del proyecto (i
 ## Componentes
 
 - **Qdrant**: Vector database compartida por todos los servicios
+- **Langfuse**: Plataforma de observabilidad para LLM (opcional)
+- **Langfuse-DB**: Base de datos PostgreSQL para Langfuse
 - **Backend**: API FastAPI en puerto 8000
 - **Frontend**: Aplicación Astro + Nginx en puerto 80
 - **Ingest**: Servicio para poblar la base de datos vectorial
@@ -42,6 +44,7 @@ docker-compose up -d --build
 - **Backend API**: http://localhost:8000
 - **Backend API Docs**: http://localhost:8000/docs
 - **Qdrant Admin**: http://localhost:6333
+- **Langfuse UI**: http://localhost:3000 (para observabilidad de LLM)
 
 ### 4. Ver logs
 
@@ -90,6 +93,40 @@ Para cambios en dependencias, reconstruir:
 docker-compose up --build
 ```
 
+## Langfuse (Observabilidad de LLM)
+
+Langfuse es una plataforma de observabilidad para rastrear y analizar llamadas a LLM.
+
+### Configuración inicial
+
+1. Acceder a la UI de Langfuse: http://localhost:3000
+2. Crear una cuenta y un proyecto
+3. Obtener las llaves API (Public Key y Secret Key)
+4. Configurar en `.env`:
+   ```bash
+   LANGFUSE_PUBLIC_KEY=pk-lf-...
+   LANGFUSE_SECRET_KEY=sk-lf-...
+   LANGFUSE_HOST=http://langfuse:3000
+   LANGFUSE_ENABLED=true
+   ```
+5. Reiniciar el backend:
+   ```bash
+   docker-compose restart backend
+   ```
+
+### Funcionalidades
+
+- Rastreo de todas las llamadas al LLM (Gemini)
+- Métricas de uso y rendimiento
+- Debugging de prompts y respuestas
+- Análisis de costos (si aplica)
+
+### Desactivar Langfuse
+
+Si no necesitas observabilidad, puedes:
+- Dejar `LANGFUSE_ENABLED=false` en `.env` (el backend funcionará normalmente)
+- O comentar los servicios `langfuse` y `langfuse-db` en `docker-compose.yml`
+
 ## Troubleshooting
 
 ### Puerto ya en uso
@@ -98,6 +135,7 @@ docker-compose up --build
 lsof -i :8000   # Backend
 lsof -i :80     # Frontend
 lsof -i :6333   # Qdrant
+lsof -i :3000   # Langfuse
 
 # O cambiar puertos en docker-compose.yml
 ```
