@@ -48,8 +48,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
       - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=langfuse-local-secret-change-in-production
-      - SALT=langfuse-local-salt-change-in-production
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET:-langfuse-local-secret-change-in-production}
+      - SALT=${LANGFUSE_SALT:-langfuse-local-salt-change-in-production}
       - TELEMETRY_ENABLED=false
     depends_on:
       langfuse-db:
@@ -83,8 +83,6 @@ services:
       - DEBUG=true
     depends_on:
       qdrant:
-        condition: service_healthy
-      langfuse:
         condition: service_healthy
     volumes:
       # Mount code for development (comment out for production)

@@ -31,11 +31,14 @@ export GOOGLE_API_KEY=tu_api_key_aqui
 ### 2. Iniciar todos los servicios
 
 ```bash
-# Construir e iniciar todos los contenedores
+# Construir e iniciar todos los contenedores (incluyendo Langfuse)
 docker-compose up --build
 
 # O en modo background
 docker-compose up -d --build
+
+# Iniciar solo servicios esenciales (sin Langfuse)
+docker-compose up --build qdrant backend frontend ingest
 ```
 
 ### 3. Acceder a los servicios
@@ -126,6 +129,17 @@ Langfuse es una plataforma de observabilidad para rastrear y analizar llamadas a
 Si no necesitas observabilidad, puedes:
 - Dejar `LANGFUSE_ENABLED=false` en `.env` (el backend funcionará normalmente)
 - O comentar los servicios `langfuse` y `langfuse-db` en `docker-compose.yml`
+
+### Notas de Seguridad
+
+Para producción, debes cambiar los secretos por defecto:
+```bash
+# Generar secretos aleatorios
+LANGFUSE_NEXTAUTH_SECRET=$(openssl rand -base64 32)
+LANGFUSE_SALT=$(openssl rand -base64 32)
+```
+
+Agregar estas variables a tu `.env` de producción.
 
 ## Troubleshooting
 
