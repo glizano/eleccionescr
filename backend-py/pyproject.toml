@@ -16,7 +16,7 @@ dependencies = [
     "langchain>=0.3.13",
     "langgraph>=0.2.60",
     "langchain-qdrant>=0.2.1",
-    "langfuse>=3.0.0",
+    "langfuse>=2.0.0,<3.0.0",
 ]
 
 [dependency-groups]
