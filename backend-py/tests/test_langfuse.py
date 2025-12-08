@@ -4,8 +4,6 @@ Tests for the Langfuse service integration.
 
 from unittest.mock import patch
 
-import pytest
-
 
 def test_langfuse_disabled_by_default():
     """Test that Langfuse client returns None when disabled."""
@@ -85,8 +83,7 @@ def test_shutdown_langfuse_handles_no_client():
         shutdown_langfuse()
 
 
-@pytest.mark.asyncio
-async def test_llm_generate_text_with_none_trace():
+def test_llm_generate_text_with_none_trace():
     """Test that generate_text works with langfuse_trace=None."""
     from unittest.mock import MagicMock
 
