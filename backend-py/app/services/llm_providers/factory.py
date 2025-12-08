@@ -43,6 +43,7 @@ def create_llm_provider(provider_type: LLMProviderType | None = None) -> LLMProv
         return GoogleProvider(
             api_key=settings.google_api_key,
             model=settings.google_model,
+            safety_threshold=settings.google_safety_threshold,
         )
 
     elif provider_type == "openai":

@@ -15,16 +15,23 @@ logger = logging.getLogger(__name__)
 class GoogleProvider(LLMProvider):
     """Google Gemini LLM provider."""
 
-    def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "gemini-2.5-flash",
+        safety_threshold: str = "BLOCK_MEDIUM_AND_ABOVE",
+    ):
         """
         Initialize the Google Gemini provider.
 
         Args:
             api_key: Google API key.
             model: Model name to use (default: gemini-2.5-flash).
+            safety_threshold: Safety filter threshold (default: BLOCK_MEDIUM_AND_ABOVE).
         """
         self._api_key = api_key
         self._model = model
+        self._safety_threshold = safety_threshold
         self._client = genai.Client(api_key=api_key)
 
     @property
@@ -42,13 +49,19 @@ class GoogleProvider(LLMProvider):
                     temperature=0.2,
                     max_output_tokens=2048,
                     safety_settings=[
-                        types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
                         types.SafetySetting(
-                            category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
+                            category="HARM_CATEGORY_HATE_SPEECH", threshold=self._safety_threshold
                         ),
-                        types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
                         types.SafetySetting(
-                            category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
+                            category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                            threshold=self._safety_threshold,
+                        ),
+                        types.SafetySetting(
+                            category="HARM_CATEGORY_HARASSMENT", threshold=self._safety_threshold
+                        ),
+                        types.SafetySetting(
+                            category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                            threshold=self._safety_threshold,
                         ),
                     ],
                 ),

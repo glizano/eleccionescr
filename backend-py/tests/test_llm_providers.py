@@ -48,7 +48,9 @@ class TestGoogleProvider:
     @patch("app.services.llm_providers.google_provider.genai.Client")
     def test_google_provider_init(self, mock_client):
         """Test GoogleProvider initialization."""
-        provider = GoogleProvider(api_key="test_key", model="gemini-2.5-flash")
+        provider = GoogleProvider(
+            api_key="test_key", model="gemini-2.5-flash", safety_threshold="BLOCK_MEDIUM_AND_ABOVE"
+        )
 
         assert provider.model_name == "gemini-2.5-flash"
         mock_client.assert_called_once_with(api_key="test_key")
@@ -148,6 +150,7 @@ class TestProviderFactory:
         mock_settings.llm_provider = "google"
         mock_settings.google_api_key = "test_key"
         mock_settings.google_model = "gemini-2.5-flash"
+        mock_settings.google_safety_threshold = "BLOCK_MEDIUM_AND_ABOVE"
 
         provider = create_llm_provider("google")
 

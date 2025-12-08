@@ -160,6 +160,8 @@ LLM_PROVIDER=google
 # Google AI (required if LLM_PROVIDER=google)
 GOOGLE_API_KEY=tu_key_aqui
 GOOGLE_MODEL=gemini-2.5-flash
+# Safety threshold: OFF, BLOCK_NONE, BLOCK_ONLY_HIGH, BLOCK_MEDIUM_AND_ABOVE (default), BLOCK_LOW_AND_ABOVE
+GOOGLE_SAFETY_THRESHOLD=BLOCK_MEDIUM_AND_ABOVE
 
 # OpenAI (required if LLM_PROVIDER=openai)
 OPENAI_API_KEY=tu_openai_key_aqui
@@ -176,6 +178,15 @@ El sistema soporta múltiples proveedores de LLM:
 | OpenAI | `LLM_PROVIDER=openai` | gpt-4o-mini (default), gpt-4o, gpt-4-turbo, etc. |
 
 Para cambiar de proveedor, simplemente modifica `LLM_PROVIDER` en tu archivo `.env` y proporciona la API key correspondiente.
+
+### Configuración de Seguridad (Google Gemini)
+
+Para Google Gemini, puedes configurar el nivel de filtros de seguridad con `GOOGLE_SAFETY_THRESHOLD`:
+
+- `BLOCK_MEDIUM_AND_ABOVE` (default): Bloquea contenido con nivel medio o superior
+- `BLOCK_ONLY_HIGH`: Solo bloquea contenido de alto riesgo
+- `BLOCK_LOW_AND_ABOVE`: Bloquea incluso contenido de bajo riesgo
+- `OFF`: Desactiva los filtros de seguridad (no recomendado)
 
 ## 📊 Ventajas vs Versión Anterior
 
