@@ -1,10 +1,12 @@
 import os
 import hashlib
 import logging
-from abc import ABC, abstractmethod
-
 import uuid
 from pathlib import Path
+
+from langchain_core.embeddings import Embeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from pypdf import PdfReader
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
@@ -22,77 +24,16 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 
-# ---------- Embedding Providers ----------
-class EmbeddingProvider(ABC):
-    """Abstract base class for embedding providers"""
-
-    @abstractmethod
-    def get_embedding_dimension(self) -> int:
-        """Return the dimension of the embedding vectors"""
-        pass
-
-    @abstractmethod
-    def encode(self, texts: list[str]) -> list[list[float]]:
-        """Encode a list of texts into embeddings"""
-        pass
-
-
-class SentenceTransformersProvider(EmbeddingProvider):
-    """Embedding provider using sentence-transformers library"""
-
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
-        from sentence_transformers import SentenceTransformer
-
-        self.model_name = model_name
-        self.model = SentenceTransformer(model_name)
-        logger.info(f"Loaded SentenceTransformers model: {model_name}")
-
-    def get_embedding_dimension(self) -> int:
-        return self.model.get_sentence_embedding_dimension()
-
-    def encode(self, texts: list[str]) -> list[list[float]]:
-        embeddings = self.model.encode(texts, show_progress_bar=False)
-        return [embedding.tolist() for embedding in embeddings]
-
-
-class OpenAIProvider(EmbeddingProvider):
-    """Embedding provider using OpenAI API"""
-
-    # Map of model names to their embedding dimensions
-    MODEL_DIMENSIONS = {
-        "text-embedding-3-small": 1536,
-        "text-embedding-3-large": 3072,
-        "text-embedding-ada-002": 1536,
-    }
-
-    def __init__(self, model_name: str = "text-embedding-3-small", api_key: str | None = None):
-        from openai import OpenAI
-
-        self.model_name = model_name
-        # Handle both None and empty string cases
-        resolved_api_key = api_key if api_key else OPENAI_API_KEY
-        if not resolved_api_key:
-            raise ValueError("OpenAI API key is required for OpenAI embedding provider")
-        self.client = OpenAI(api_key=resolved_api_key)
-        logger.info(f"Initialized OpenAI embedding provider with model: {model_name}")
-
-    def get_embedding_dimension(self) -> int:
-        return self.MODEL_DIMENSIONS.get(self.model_name, 1536)
-
-    def encode(self, texts: list[str]) -> list[list[float]]:
-        # OpenAI recommends replacing newlines for better results
-        cleaned_texts = [text.replace("\n", " ") for text in texts]
-        response = self.client.embeddings.create(input=cleaned_texts, model=self.model_name)
-        return [data.embedding for data in response.data]
-
-
 # Lazy initialization for embedding provider
 _embed_provider = None
-_vector_dim = None
 
 
-def get_embedding_provider() -> EmbeddingProvider:
-    """Get the configured embedding provider (lazy initialization)"""
+def get_embedding_provider() -> Embeddings:
+    """Get the configured embedding provider (lazy initialization).
+    
+    Returns:
+        A LangChain Embeddings instance.
+    """
     global _embed_provider
     if _embed_provider is not None:
         return _embed_provider
@@ -101,24 +42,30 @@ def get_embedding_provider() -> EmbeddingProvider:
 
     if EMBEDDING_PROVIDER == "openai":
         # For OpenAI, use a default model if no specific model is configured
-        # or the configured model doesn't match OpenAI format
         if model_name.startswith("sentence-transformers/"):
             model_name = "text-embedding-3-small"
-        _embed_provider = OpenAIProvider(model_name=model_name)
+        if not OPENAI_API_KEY:
+            raise ValueError("OpenAI API key is required for OpenAI embedding provider")
+        _embed_provider = OpenAIEmbeddings(model=model_name, api_key=OPENAI_API_KEY)
+        logger.info(f"Initialized OpenAI embeddings provider with model: {model_name}")
     else:
-        # Default to sentence-transformers
-        _embed_provider = SentenceTransformersProvider(model_name=model_name)
+        # Default to HuggingFace (sentence-transformers)
+        _embed_provider = HuggingFaceEmbeddings(model_name=model_name)
+        logger.info(f"Initialized HuggingFace embeddings provider with model: {model_name}")
 
     return _embed_provider
 
 
 def get_vector_dimension() -> int:
-    """Get the vector dimension for the configured embedding provider"""
-    global _vector_dim
-    if _vector_dim is not None:
-        return _vector_dim
-    _vector_dim = get_embedding_provider().get_embedding_dimension()
-    return _vector_dim
+    """Get the vector dimension for the configured embedding provider.
+    
+    Returns:
+        The dimension size of embedding vectors.
+    """
+    provider = get_embedding_provider()
+    # Get dimension by encoding a dummy text
+    test_embedding = provider.embed_query("test")
+    return len(test_embedding)
 
 # ---------- Helpers ----------
 def sha256_file(path: Path):
@@ -195,7 +142,7 @@ def delete_doc_points(qc: QdrantClient, doc_id: str):
 
 def upsert_chunks(qc: QdrantClient, chunks, doc_id, filename, partido, file_hash):
     provider = get_embedding_provider()
-    embeddings = provider.encode(chunks)
+    embeddings = provider.embed_documents(chunks)
     points = []
     for i, (chunk, vec) in enumerate(zip(chunks, embeddings)):
         pid = str(uuid.uuid4())

@@ -1,109 +1,81 @@
+"""
+Embeddings service using LangChain providers.
+
+Provides a flexible interface to switch between different embedding providers.
+"""
+
 import logging
-from abc import ABC, abstractmethod
 from functools import lru_cache
+
+from langchain_core.embeddings import Embeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-class EmbeddingProvider(ABC):
-    """Abstract base class for embedding providers"""
-
-    @abstractmethod
-    def get_embedding_dimension(self) -> int:
-        """Return the dimension of the embedding vectors"""
-        pass
-
-    @abstractmethod
-    def encode(self, texts: list[str]) -> list[list[float]]:
-        """Encode a list of texts into embeddings"""
-        pass
-
-    def encode_single(self, text: str) -> list[float]:
-        """Encode a single text into an embedding"""
-        return self.encode([text])[0]
-
-
-class SentenceTransformersProvider(EmbeddingProvider):
-    """Embedding provider using sentence-transformers library"""
-
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
-        from sentence_transformers import SentenceTransformer
-
-        self.model_name = model_name
-        self.model = SentenceTransformer(model_name)
-        logger.info(f"Loaded SentenceTransformers model: {model_name}")
-
-    def get_embedding_dimension(self) -> int:
-        return self.model.get_sentence_embedding_dimension()
-
-    def encode(self, texts: list[str]) -> list[list[float]]:
-        embeddings = self.model.encode(texts, show_progress_bar=False)
-        return [embedding.tolist() for embedding in embeddings]
-
-
-class OpenAIProvider(EmbeddingProvider):
-    """Embedding provider using OpenAI API"""
-
-    # Map of model names to their embedding dimensions
-    MODEL_DIMENSIONS = {
-        "text-embedding-3-small": 1536,
-        "text-embedding-3-large": 3072,
-        "text-embedding-ada-002": 1536,
-    }
-
-    def __init__(self, model_name: str = "text-embedding-3-small", api_key: str | None = None):
-        from openai import OpenAI
-
-        self.model_name = model_name
-        # Handle both None and empty string cases
-        resolved_api_key = api_key if api_key else settings.openai_api_key
-        if not resolved_api_key:
-            raise ValueError("OpenAI API key is required for OpenAI embedding provider")
-        self.client = OpenAI(api_key=resolved_api_key)
-        logger.info(f"Initialized OpenAI embedding provider with model: {model_name}")
-
-    def get_embedding_dimension(self) -> int:
-        return self.MODEL_DIMENSIONS.get(self.model_name, 1536)
-
-    def encode(self, texts: list[str]) -> list[list[float]]:
-        # OpenAI recommends replacing newlines for better results
-        cleaned_texts = [text.replace("\n", " ") for text in texts]
-        response = self.client.embeddings.create(input=cleaned_texts, model=self.model_name)
-        return [data.embedding for data in response.data]
-
-
 @lru_cache(maxsize=1)
-def get_embedding_provider() -> EmbeddingProvider:
-    """Get the configured embedding provider (cached)"""
+def get_embedding_provider() -> Embeddings:
+    """Get the configured embedding provider (cached).
+
+    Returns:
+        A LangChain Embeddings instance configured based on settings.
+    """
     provider_type = settings.embedding_provider
     model_name = settings.embedding_model
 
     if provider_type == "openai":
-        # For OpenAI, use a default model if no specific model is configured
-        # or the configured model doesn't match OpenAI format
+        # For OpenAI, use a default model if the configured model doesn't match OpenAI format
         if model_name.startswith("sentence-transformers/"):
             model_name = "text-embedding-3-small"
-        return OpenAIProvider(model_name=model_name)
+        embeddings = OpenAIEmbeddings(
+            model=model_name,
+            api_key=settings.openai_api_key,
+        )
+        logger.info(f"Initialized OpenAI embeddings provider with model: {model_name}")
+        return embeddings
     else:
-        # Default to sentence-transformers
-        return SentenceTransformersProvider(model_name=model_name)
+        # Default to HuggingFace (sentence-transformers)
+        embeddings = HuggingFaceEmbeddings(model_name=model_name)
+        logger.info(f"Initialized HuggingFace embeddings provider with model: {model_name}")
+        return embeddings
 
 
 def generate_embedding(text: str) -> list[float]:
-    """Generate embedding for text"""
+    """Generate embedding for a single text.
+
+    Args:
+        text: The text to embed.
+
+    Returns:
+        The embedding vector as a list of floats.
+    """
     provider = get_embedding_provider()
-    return provider.encode_single(text)
+    return provider.embed_query(text)
 
 
 def generate_embeddings(texts: list[str]) -> list[list[float]]:
-    """Generate embeddings for multiple texts"""
+    """Generate embeddings for multiple texts.
+
+    Args:
+        texts: List of texts to embed.
+
+    Returns:
+        List of embedding vectors.
+    """
     provider = get_embedding_provider()
-    return provider.encode(texts)
+    return provider.embed_documents(texts)
 
 
 def get_embedding_dimension() -> int:
-    """Get the dimension of the embedding vectors"""
+    """Get the dimension of the embedding vectors.
+
+    Returns:
+        The dimension size of embedding vectors.
+    """
     provider = get_embedding_provider()
-    return provider.get_embedding_dimension()
+    # Get dimension by encoding a dummy text
+    test_embedding = provider.embed_query("test")
+    return len(test_embedding)
