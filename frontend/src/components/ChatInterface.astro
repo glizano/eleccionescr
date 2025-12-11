@@ -73,6 +73,13 @@
         body: JSON.stringify({ question }),
       });
 
+      // Handle rate limit error (429)
+      if (response.status === 429) {
+        removeMessage(loadingId);
+        addMessage('⏱️ **Límite de peticiones alcanzado**\n\nHas superado el número máximo de consultas permitidas. Por favor, espera un momento antes de intentar nuevamente.\n\n_Límites: 10 por minuto, 30 por hora, 100 por día._', 'bot error');
+        return;
+      }
+
       if (!response.ok) throw new Error('Error en la conexión');
 
       const data = await response.json();
@@ -254,9 +261,13 @@
   }
   
   .message.error .message-content {
-    background: #fee2e2;
-    color: #991b1b;
-    border: 1px solid #fca5a5;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fbbf24;
+  }
+  
+  .message.error .message-content strong {
+    color: #92400e;
   }
 
   .message-content {
