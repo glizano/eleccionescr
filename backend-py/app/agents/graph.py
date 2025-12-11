@@ -52,14 +52,22 @@ def rag_search_node(state: AgentState) -> AgentState:
 
     # Determine search strategy based on intent
     if state["intent"] == "specific_party" and state.get("parties"):
-        # Strategy 1: Specific party - get more chunks from that party
+        # Strategy 1: Specific party topic - get focused chunks from that party
         partido_filter = state["parties"][0]
-        logger.info(f"[Agent] Filtering by party: {partido_filter}")
+        logger.info(f"[Agent] Specific topic for party: {partido_filter}")
 
         contexts = search_qdrant(query_vector=query_vector, partido_filter=partido_filter, limit=5)
 
+    elif state["intent"] == "party_general_plan" and state.get("parties"):
+        # Strategy 2: General party plan - get comprehensive chunks from that party
+        partido_filter = state["parties"][0]
+        logger.info(f"[Agent] General plan overview for party: {partido_filter}")
+
+        # Get more chunks for comprehensive overview
+        contexts = search_qdrant(query_vector=query_vector, partido_filter=partido_filter, limit=15)
+
     elif state["intent"] == "general_comparison":
-        # Strategy 2: General question - get chunks from multiple parties
+        # Strategy 3: General question - get chunks from multiple parties
         logger.info("[Agent] General question - searching across all parties")
 
         # First, get top results without filter
@@ -91,7 +99,7 @@ def rag_search_node(state: AgentState) -> AgentState:
         )
 
     else:
-        # Strategy 3: Unclear - default search
+        # Strategy 4: Unclear - default search
         logger.info("[Agent] Unclear intent - default search")
         contexts = search_qdrant(query_vector=query_vector, partido_filter=None, limit=5)
 
@@ -124,6 +132,14 @@ IMPORTANTE: Esta es una pregunta GENERAL o COMPARATIVA.
 - Organiza la respuesta por partido: "Según [Partido], ..."
 - Si un partido no tiene información sobre el tema, no lo menciones
 - Compara o contrasta las propuestas cuando sea relevante"""
+    elif state["intent"] == "party_general_plan":
+        specific_instructions = """
+IMPORTANTE: Esta es una pregunta que solicita un RESUMEN GENERAL o COMPLETO del plan de un partido.
+- Proporciona una visión INTEGRAL y COMPREHENSIVA del plan basándote en todos los chunks disponibles
+- Organiza la información por temas/áreas principales (educación, salud, economía, seguridad, etc.)
+- Menciona los puntos clave y propuestas principales de cada área
+- Usa un formato estructurado y fácil de leer
+- Cita siempre: "Según [Partido], ..." """
     else:
         specific_instructions = """
 IMPORTANTE: Esta es una pregunta sobre un partido ESPECÍFICO.
@@ -193,10 +209,10 @@ def route_by_intent(state: AgentState) -> str:
     """Conditional edge: Route based on intent"""
     intent = state.get("intent", "unclear")
 
-    if intent == "specific_party":
+    if intent in ["specific_party", "party_general_plan"]:
         return "extract_parties"
     else:
-        # For general or unclear, go directly to RAG
+        # For general_comparison or unclear, go directly to RAG
         return "rag_search"
 
 

@@ -132,7 +132,7 @@ def test_ask_endpoint_specific_party(client):
     assert "agent_trace" in data
     trace = data["agent_trace"]
     assert "intent" in trace
-    assert trace["intent"] in ["specific_party", "general_comparison"]
+    assert trace["intent"] in ["specific_party", "party_general_plan", "general_comparison"]
     assert len(data["sources"]) > 0
     assert data["sources"][0]["partido"] in ["PLN", "PUSC"]
 
