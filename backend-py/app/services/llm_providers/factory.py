@@ -8,23 +8,24 @@ import logging
 from functools import lru_cache
 from typing import Literal
 
+from langchain_core.language_models import BaseChatModel
+
 from app.config import settings
-from app.services.llm_providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
 LLMProviderType = Literal["google", "openai"]
 
 
-def create_llm_provider(provider_type: LLMProviderType | None = None) -> LLMProvider:
+def create_llm_provider(provider_type: LLMProviderType | None = None) -> BaseChatModel:
     """
-    Create an LLM provider based on the specified type or settings.
+    Create a LangChain chat model based on the specified type or settings.
 
     Args:
         provider_type: The type of provider to create. If None, uses settings.llm_provider.
 
     Returns:
-        An instance of the appropriate LLM provider.
+        A LangChain BaseChatModel instance.
 
     Raises:
         ValueError: If the provider type is unknown or required API key is missing.
@@ -38,9 +39,9 @@ def create_llm_provider(provider_type: LLMProviderType | None = None) -> LLMProv
         if not settings.google_api_key:
             raise ValueError("Google API key is required for Google provider")
 
-        from app.services.llm_providers.google_provider import create_google_provider
+        from app.services.llm_providers.google_provider import create_google_chat_model
 
-        return create_google_provider(
+        return create_google_chat_model(
             api_key=settings.google_api_key,
             model=settings.google_model,
             safety_threshold=settings.google_safety_threshold,
@@ -50,9 +51,9 @@ def create_llm_provider(provider_type: LLMProviderType | None = None) -> LLMProv
         if not settings.openai_api_key:
             raise ValueError("OpenAI API key is required for OpenAI provider")
 
-        from app.services.llm_providers.openai_provider import create_openai_provider
+        from app.services.llm_providers.openai_provider import create_openai_chat_model
 
-        return create_openai_provider(
+        return create_openai_chat_model(
             api_key=settings.openai_api_key,
             model=settings.openai_model,
         )
@@ -62,11 +63,11 @@ def create_llm_provider(provider_type: LLMProviderType | None = None) -> LLMProv
 
 
 @lru_cache(maxsize=1)
-def get_llm_provider() -> LLMProvider:
+def get_llm_provider() -> BaseChatModel:
     """
-    Get the configured LLM provider (cached).
+    Get the configured LangChain chat model (cached).
 
     Returns:
-        The configured LLM provider instance.
+        The configured LangChain BaseChatModel instance.
     """
     return create_llm_provider()

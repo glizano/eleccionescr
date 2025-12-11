@@ -6,8 +6,6 @@ import logging
 
 from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
 
-from app.services.llm_providers.base import LLMProvider
-
 logger = logging.getLogger(__name__)
 
 # Map config string to LangChain enum
@@ -19,13 +17,13 @@ SAFETY_THRESHOLD_MAP = {
 }
 
 
-def create_google_provider(
+def create_google_chat_model(
     api_key: str,
     model: str = "gemini-2.5-flash",
     safety_threshold: str = "BLOCK_MEDIUM_AND_ABOVE",
-) -> LLMProvider:
+) -> ChatGoogleGenerativeAI:
     """
-    Create a Google Gemini provider using LangChain.
+    Create a ChatGoogleGenerativeAI model.
 
     Args:
         api_key: Google API key.
@@ -34,8 +32,8 @@ def create_google_provider(
             Options: BLOCK_NONE, BLOCK_ONLY_HIGH, BLOCK_MEDIUM_AND_ABOVE, BLOCK_LOW_AND_ABOVE.
 
     Returns:
-        LLMProvider instance wrapping ChatGoogleGenerativeAI configured with
-        temperature=0.2, max_output_tokens=2048, and the specified safety settings.
+        ChatGoogleGenerativeAI instance configured with temperature=0.2,
+        max_output_tokens=2048, and the specified safety settings.
     """
     threshold = SAFETY_THRESHOLD_MAP.get(
         safety_threshold, HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
@@ -57,5 +55,5 @@ def create_google_provider(
         safety_settings=safety_settings,
     )
 
-    logger.info(f"Created Google Gemini provider with model: {model}, safety: {safety_threshold}")
-    return LLMProvider(chat_model)
+    logger.info(f"Created Google Gemini chat model: {model}, safety: {safety_threshold}")
+    return chat_model
