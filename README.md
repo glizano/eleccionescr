@@ -39,10 +39,15 @@ Desarrollo local (sin docker-compose)
 - Frontend: entra a `frontend/` y ejecuta `npm install` y `npm run dev`.
 - Ingest: entra a `ingest/` y ejecuta `python main.py` (asegúrate de que Qdrant esté corriendo).
 
+Despliegue en Railway
+
+Para desplegar este proyecto en Railway (o cualquier otro servicio cloud), consulta la guía completa en [RAILWAY_DEPLOYMENT.md](./RAILWAY_DEPLOYMENT.md). El proyecto está configurado para desplegar el frontend y backend con variables de entorno para configuración flexible.
+
 Buenas prácticas
 
 - No comitear archivos sensibles: utiliza `.env` y no lo subas (hay `.gitignore`).
 - Para producción, adapta `docker-compose.yml` y evita montar volúmenes de código en producción.
+- Configura `PUBLIC_BACKEND_URL` en el frontend para apuntar a tu backend en producción.
 
 Más documentación está disponible en los `README.md` dentro de cada subdirectorio.
 

@@ -41,11 +41,14 @@
 
   let isLoading = false;
   let rateLimits = { per_minute: 10, per_hour: 30, per_day: 100 }; // Default values
+  
+  // Get backend URL from environment variable
+  const BACKEND_URL = import.meta.env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
   // Fetch rate limit configuration on load
   async function loadRateLimits() {
     try {
-      const response = await fetch('http://localhost:8000/api/config');
+      const response = await fetch(`${BACKEND_URL}/api/config`);
       if (response.ok) {
         const config = await response.json();
         rateLimits = config.rate_limits;
@@ -82,7 +85,7 @@
 
     try {
       // 3. Call API
-      const response = await fetch('http://localhost:8000/api/ask', {
+      const response = await fetch(`${BACKEND_URL}/api/ask`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
