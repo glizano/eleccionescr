@@ -2,8 +2,9 @@
 Tests for the backend API endpoints.
 """
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
 
 
@@ -63,7 +64,7 @@ def client(mock_qdrant_client, mock_embedding_vector, mock_llm_text):
     from app.services import llm as llm_module
 
     # Clear LLM client cache before patching
-    if hasattr(llm_module.get_client, 'cache_clear'):
+    if hasattr(llm_module.get_client, "cache_clear"):
         llm_module.get_client.cache_clear()
 
     patcher_client_getter = patch("app.services.qdrant.get_qdrant_client")
@@ -79,7 +80,7 @@ def client(mock_qdrant_client, mock_embedding_vector, mock_llm_text):
     # Mock the Qdrant client getter to return our mock client
     mock_get_qdrant.return_value = mock_qdrant_client
     mock_embed.return_value = mock_embedding_vector
-    
+
     # Mock the LLM client to return a mock that generates our text
     mock_llm_client = MagicMock()
     mock_response = MagicMock()
@@ -87,7 +88,7 @@ def client(mock_qdrant_client, mock_embedding_vector, mock_llm_text):
     mock_response.candidates[0].content.parts = [MagicMock(text=mock_llm_text)]
     mock_llm_client.models.generate_content.return_value = mock_response
     mock_get_llm_client.return_value = mock_llm_client
-    
+
     mock_classifier.side_effect = ["specific_party", "PLN"]
 
     yield TestClient(app)
