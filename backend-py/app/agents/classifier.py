@@ -21,8 +21,8 @@ class IntentClassifierState(TypedDict):
 class IntentClassification(BaseModel):
     """Structured output for intent classification"""
 
-    intent: Literal["specific_party", "party_general_plan", "general_comparison", "unclear"] = Field(
-        description="The classified intent of the question"
+    intent: Literal["specific_party", "party_general_plan", "general_comparison", "unclear"] = (
+        Field(description="The classified intent of the question")
     )
 
 
