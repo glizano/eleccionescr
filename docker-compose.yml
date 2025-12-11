@@ -144,7 +144,7 @@ services:
       - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-sentence_transformers}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DATA_DIR=/app/data
+      - DATA_DIR=/app/data/raw
     depends_on:
       qdrant:
         condition: service_healthy
