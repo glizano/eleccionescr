@@ -1,0 +1,84 @@
+# Production Docker Compose Override Example
+# Copy this file to docker-compose.override.yml and customize for production
+# Usage: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+
+version: '3.8'
+
+services:
+  backend:
+    # Remove development code mounts
+    volumes: []
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - CORS_ORIGINS=https://your-domain.com
+      - LOG_LEVEL=WARNING
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  frontend:
+    restart: always
+    environment:
+      - PUBLIC_BACKEND_URL=https://api.your-domain.com
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  qdrant:
+    restart: always
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  langfuse:
+    restart: always
+    environment:
+      - NEXTAUTH_URL=https://langfuse.your-domain.com
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET}
+      - SALT=${LANGFUSE_SALT}
+      - TELEMETRY_ENABLED=false
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  langfuse-db:
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=${LANGFUSE_DB_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # Optional: Add nginx reverse proxy for SSL termination
+  nginx-proxy:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: always

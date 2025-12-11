@@ -36,5 +36,8 @@ jobs:
       - name: Run type check
         run: npx astro check
         
+      - name: Check code formatting
+        run: npm run format:check
+        
       - name: Build project
         run: npm run build

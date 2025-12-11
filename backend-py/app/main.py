@@ -63,10 +63,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS Configuration
+# Configuration
 from app.config import settings
 
-# Parse CORS origins from configuration
+# CORS Configuration
 cors_origins = settings.cors_origins.split(",") if settings.cors_origins != "*" else ["*"]
 
 if settings.environment == "production" and "*" in cors_origins:
@@ -79,6 +79,11 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+# Rate Limiting Middleware
+from app.middleware.rate_limit import RateLimitMiddleware
+
+app.add_middleware(RateLimitMiddleware, requests_per_minute=settings.max_requests_per_minute)
 
 
 @app.get("/health")
