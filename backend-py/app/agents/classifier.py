@@ -1,7 +1,9 @@
 import logging
 from typing import Literal, TypedDict
 
-from app.services.llm import generate_text
+from pydantic import BaseModel, Field
+
+from app.services.llm import get_llm
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,22 @@ class IntentClassifierState(TypedDict):
 
     question: str
     intent: Literal["specific_party", "general_comparison", "unclear"]
+
+
+class IntentClassification(BaseModel):
+    """Structured output for intent classification"""
+
+    intent: Literal["specific_party", "general_comparison", "unclear"] = Field(
+        description="The classified intent of the question"
+    )
+
+
+class PartyExtraction(BaseModel):
+    """Structured output for party extraction"""
+
+    parties: list[str] = Field(
+        description="List of party abbreviations mentioned in the question (e.g., PLN, PUSC)"
+    )
 
 
 def classify_intent(question: str) -> str:
@@ -36,21 +54,15 @@ Ejemplos:
 - "Compara las propuestas de PLN y PUSC" → general_comparison
 - "¿Cuál es la mejor propuesta educativa?" → general_comparison
 
-Responde SOLO con: specific_party, general_comparison, o unclear
-
 Pregunta: {question}"""
 
     try:
-        response = generate_text(prompt)
-        intent = response.strip().lower()
+        llm = get_llm()
+        structured_llm = llm.with_structured_output(IntentClassification)
+        result = structured_llm.invoke(prompt)
 
-        # Validate response
-        if intent not in ["specific_party", "general_comparison", "unclear"]:
-            logger.warning(f"Invalid intent classification: {intent}, defaulting to unclear")
-            return "unclear"
-
-        logger.info(f"Intent classified as: {intent}")
-        return intent
+        logger.info(f"Intent classified as: {result.intent}")
+        return result.intent
 
     except Exception as e:
         logger.error(f"Error classifying intent: {e}")
@@ -70,31 +82,26 @@ def extract_parties(question: str) -> list[str]:
 Partidos conocidos: {parties_str}
 
 Reglas:
-- Devuelve SOLO las siglas de los partidos mencionados
-- Si no se menciona ningún partido, devuelve "NINGUNO"
-- Separa múltiples partidos con comas
+- Devuelve las siglas de los partidos mencionados como lista
+- Si no se menciona ningún partido, devuelve lista vacía
 - Usa las siglas exactas de la lista
+- Solo incluye partidos que estén en la lista de partidos conocidos
 
 Ejemplos:
-- "¿Qué propone el PLN?" → PLN
-- "Compara PLN y PUSC" → PLN, PUSC
-- "¿Qué dicen sobre educación?" → NINGUNO
-- "El Partido Liberación Nacional propone..." → PLN
+- "¿Qué propone el PLN?" → ["PLN"]
+- "Compara PLN y PUSC" → ["PLN", "PUSC"]
+- "¿Qué dicen sobre educación?" → []
+- "El Partido Liberación Nacional propone..." → ["PLN"]
 
 Pregunta: {question}"""
 
     try:
-        response = generate_text(prompt)
-        result = response.strip().upper()
+        llm = get_llm()
+        structured_llm = llm.with_structured_output(PartyExtraction)
+        result = structured_llm.invoke(prompt)
 
-        if result == "NINGUNO":
-            return []
-
-        # Parse comma-separated parties
-        parties = [p.strip() for p in result.split(",")]
-
-        # Filter to only known parties
-        valid_parties = [p for p in parties if p in KNOWN_PARTIES]
+        # Filter to only known parties (extra safety)
+        valid_parties = [p for p in result.parties if p in KNOWN_PARTIES]
 
         logger.info(f"Extracted parties: {valid_parties}")
         return valid_parties
