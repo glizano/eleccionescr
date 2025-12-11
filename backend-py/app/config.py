@@ -1,15 +1,18 @@
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(extra="ignore")
+
     # Qdrant
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
     qdrant_collection: str = "planes_gobierno"
 
     # LLM
-    google_api_key: str
-    google_model: str = "gemini-1.5-flash"
+    google_api_key: str = ""
+    google_model: str = "gemini-2.5-flash"
 
     # Server
     host: str = "0.0.0.0"
@@ -21,10 +24,6 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 
 settings = Settings()
