@@ -84,7 +84,7 @@ def sha256_file(path: Path):
     return h.hexdigest()
 
 def read_pdf_text(path: Path):
-    # Intenta extracción directa con pypdf
+    """Extract text from PDF file using pypdf."""
     try:
         reader = PdfReader(str(path))
         pages = []
@@ -96,7 +96,7 @@ def read_pdf_text(path: Path):
         if text:
             return text
     except Exception as e:
-        print("pypdf err:", e)
+        logger.error(f"Error extracting text from {path.name}: {e}")
 
 def chunk_text_words(text, chunk_size=500, overlap=50):
     words = text.split()
@@ -110,21 +110,31 @@ def chunk_text_words(text, chunk_size=500, overlap=50):
 
 # ---------- Qdrant client ----------
 def init_qdrant():
+    """Initialize Qdrant client and create collection if needed."""
     if QDRANT_API_KEY:
         qc = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
     else:
         qc = QdrantClient(url=QDRANT_URL)
-    # crear coleccion si no existe
+    
+    logger.info(f"Connected to Qdrant at {QDRANT_URL}")
+    
+    # Create collection if it doesn't exist
     try:
         collections = [c.name for c in qc.get_collections().collections]
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error getting collections: {e}")
         collections = []
+    
     if COLLECTION not in collections:
+        dimension = get_vector_dimension()
         qc.create_collection(
             collection_name=COLLECTION,
-            vectors_config=VectorParams(size=get_vector_dimension(), distance=Distance.COSINE)
+            vectors_config=VectorParams(size=dimension, distance=Distance.COSINE)
         )
-        print("Created collection", COLLECTION)
+        logger.info(f"Created collection '{COLLECTION}' with dimension {dimension}")
+    else:
+        logger.info(f"Using existing collection '{COLLECTION}'")
+    
     return qc
 
 # ---------- Upsert document (delete old + insert new) ----------
@@ -141,9 +151,9 @@ def delete_doc_points(qc: QdrantClient, doc_id: str):
                 ]
             )
         )
-        print("Deleted previous points for", doc_id)
+        logger.debug(f"Deleted previous points for {doc_id}")
     except Exception as e:
-        print("Delete error:", e)
+        logger.error(f"Delete error for {doc_id}: {e}")
 
 def upsert_chunks(qc: QdrantClient, chunks, doc_id, filename, partido, file_hash):
     provider = get_embedding_provider()
@@ -167,7 +177,18 @@ def upsert_chunks(qc: QdrantClient, chunks, doc_id, filename, partido, file_hash
         qc.upsert(collection_name=COLLECTION, points=batch)
 
 # ---------- Main ingestion flow ----------
-def process_file(qc, path: Path, partido: str):
+def process_file(qc, path: Path, partido: str) -> bool:
+    """
+    Process a single PDF file and upsert to Qdrant.
+    
+    Args:
+        qc: Qdrant client
+        path: Path to PDF file
+        partido: Political party name
+        
+    Returns:
+        True if file was processed, False if skipped
+    """
     file_hash = sha256_file(path)
     doc_id = path.stem  # use filename without extension
 
@@ -186,19 +207,19 @@ def process_file(qc, path: Path, partido: str):
         if result:
             existing_hash = result[0].payload.get("file_hash")
             if existing_hash == file_hash:
-                print(f"SKIP {path.name} (no changes)")
+                logger.info(f"SKIP {path.name} (no changes)")
                 return False
-            print(f"Updating {path.name}...")
+            logger.info(f"Updating {path.name}...")
     except Exception as e:
-        print(f"Error checking status for {path.name}: {e}")
+        logger.error(f"Error checking status for {path.name}: {e}")
 
     text = read_pdf_text(path)
     if not text or len(text) < 100:
-        print("No usable text for", path.name)
+        logger.warning(f"No usable text for {path.name}")
         return False
 
     chunks = chunk_text_words(text, chunk_size=600, overlap=100)
-    print(f"{path.name} -> {len(chunks)} chunks")
+    logger.info(f"{path.name} -> {len(chunks)} chunks")
 
     # delete old points for this doc_id
     delete_doc_points(qc, doc_id)
@@ -206,8 +227,7 @@ def process_file(qc, path: Path, partido: str):
     # upsert new chunks
     upsert_chunks(qc, chunks, doc_id, path.name, partido, file_hash)
 
-
-    print("Ingested", path.name)
+    logger.info(f"Successfully ingested {path.name}")
     return True
 
 def ingest():

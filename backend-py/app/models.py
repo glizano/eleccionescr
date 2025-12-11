@@ -19,7 +19,7 @@ class AskRequest(BaseModel):
     last_messages: list[ConversationMessage] | None = Field(
         None,
         description="Previous conversation messages for context",
-        max_length=10
+        max_items=10
     )
     session_id: str | None = Field(
         None,

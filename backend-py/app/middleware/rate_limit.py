@@ -37,7 +37,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Get client identifier (IP address)
-        client_ip = request.client.host if request.client else "unknown"
+        # For production behind proxies/load balancers, use X-Forwarded-For
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            # X-Forwarded-For can be a list: "client, proxy1, proxy2"
+            # Take the first (original client) IP
+            client_ip = forwarded_for.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
 
         # Clean up old entries periodically
         current_time = time.time()
