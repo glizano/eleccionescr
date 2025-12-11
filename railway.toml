@@ -1,5 +1,6 @@
 # Railway Configuration for EleccionesCR 2026
 # This file helps Railway understand the monorepo structure
+# Note: Ingest service runs via GitHub Actions, not Railway
 
 # Backend service configuration
 [[services]]
@@ -20,12 +21,3 @@ dockerfile = "frontend/Dockerfile"
 watch = ["frontend/**"]
 # Build args will be passed from environment variables
 buildArgs = ["PUBLIC_BACKEND_URL"]
-
-# Ingest service (one-time run)
-[[services]]
-name = "ingest"
-source = "ingest"
-dockerfile = "ingest/Dockerfile"
-
-[services.build]
-watch = ["ingest/**"]

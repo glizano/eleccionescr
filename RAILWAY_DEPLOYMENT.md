@@ -9,7 +9,8 @@ El proyecto se despliega como servicios separados en Railway:
 1. **Backend (FastAPI)** - API Python con FastAPI
 2. **Frontend (Astro/Nginx)** - Interfaz de usuario
 3. **Qdrant** - Base de datos vectorial (opcional: puedes usar Qdrant Cloud)
-4. **Ingest** - Script de ingesta de datos (se ejecuta una vez)
+
+**Nota:** La ingesta de datos se ejecuta mediante GitHub Actions, no como servicio de Railway.
 
 ## 📋 Pre-requisitos
 
@@ -88,21 +89,14 @@ LANGFUSE_ENABLED=false
 4. Railway generará una URL pública para tu backend (ej: `https://backend-production-xxxx.railway.app`)
 5. Anota esta URL - la necesitarás para el frontend
 
-### 4. Ejecutar el Servicio de Ingesta (Ingest)
+### 4. Ingesta de Datos
 
-El servicio de ingest solo se ejecuta una vez para poblar la base de datos vectorial con los datos.
+La ingesta de datos se ejecuta mediante **GitHub Actions**, no como un servicio de Railway. Esto permite:
+- Ejecutar la ingesta de forma programada o bajo demanda
+- Evitar costos de mantener un servicio corriendo permanentemente
+- Mejor control y trazabilidad del proceso de ingesta
 
-1. En Railway, haz clic en "New" → "GitHub Repo"
-2. Selecciona el repositorio y configura:
-   - **Root Directory**: `ingest`
-   - **Build Command**: Se detectará del Dockerfile
-   - **Start Command**: `python main.py`
-
-3. Configura las mismas variables de Qdrant y Embedding que usaste en el backend
-
-4. Una vez que el servicio termine de ejecutarse y los datos estén cargados, puedes:
-   - Pausar el servicio (para no consumir recursos)
-   - O eliminarlo completamente
+Para configurar la ingesta con GitHub Actions, consulta la documentación del workflow en `.github/workflows/`.
 
 ### 5. Desplegar el Frontend
 
