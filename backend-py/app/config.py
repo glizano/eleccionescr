@@ -1,9 +1,12 @@
 from typing import Literal
 
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(extra="ignore")
+
     # Qdrant
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
@@ -23,6 +26,12 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 
+    # Langfuse
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_enabled: bool = False
+
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
@@ -33,10 +42,6 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 
 settings = Settings()
