@@ -135,7 +135,7 @@ IMPORTANTE: Esta es una pregunta GENERAL o COMPARATIVA.
     elif state["intent"] == "party_general_plan":
         specific_instructions = """
 IMPORTANTE: Esta es una pregunta que solicita un RESUMEN GENERAL o COMPLETO del plan de un partido.
-- Proporciona una visión INTEGRAL y COMPREHENSIVA del plan basándote en todos los chunks disponibles
+- Proporciona una visión INTEGRAL y COMPRENSIVA del plan basándote en todos los chunks disponibles
 - Organiza la información por temas/áreas principales (educación, salud, economía, seguridad, etc.)
 - Menciona los puntos clave y propuestas principales de cada área
 - Usa un formato estructurado y fácil de leer
