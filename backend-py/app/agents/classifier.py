@@ -15,14 +15,14 @@ class IntentClassifierState(TypedDict):
     """State for intent classification"""
 
     question: str
-    intent: Literal["specific_party", "general_comparison", "unclear"]
+    intent: Literal["specific_party", "party_general_plan", "general_comparison", "unclear"]
 
 
 class IntentClassification(BaseModel):
     """Structured output for intent classification"""
 
-    intent: Literal["specific_party", "general_comparison", "unclear"] = Field(
-        description="The classified intent of the question"
+    intent: Literal["specific_party", "party_general_plan", "general_comparison", "unclear"] = (
+        Field(description="The classified intent of the question")
     )
 
 
@@ -38,21 +38,25 @@ def classify_intent(question: str) -> str:
     """
     Classify if question is about a specific party or general/comparison
 
-    Returns: "specific_party", "general_comparison", or "unclear"
+    Returns: "specific_party", "party_general_plan", "general_comparison", or "unclear"
     """
     prompt = f"""Eres un clasificador de intenciones para preguntas sobre planes de gobierno.
 
 Clasifica la pregunta en una de estas categorías:
-- "specific_party": La pregunta es sobre UN partido político específico
+- "specific_party": La pregunta es sobre UN TEMA O ASPECTO ESPECÍFICO de un partido (ej: educación, salud, seguridad)
+- "party_general_plan": La pregunta pide un RESUMEN COMPLETO o GENERAL del plan de un partido específico
 - "general_comparison": La pregunta es general o compara múltiples partidos
 - "unclear": No está claro
 
 Ejemplos:
-- "¿Qué propone el PLN sobre educación?" → specific_party
-- "¿Qué dice el PUSC sobre salud?" → specific_party
-- "¿Qué proponen los partidos sobre seguridad?" → general_comparison
-- "Compara las propuestas de PLN y PUSC" → general_comparison
-- "¿Cuál es la mejor propuesta educativa?" → general_comparison
+- "¿Qué propone el PLN sobre educación?" → specific_party (tema específico: educación)
+- "¿Qué dice el PUSC sobre salud?" → specific_party (tema específico: salud)
+- "¿Qué plantea el plan del PLN?" → party_general_plan (pregunta general sobre todo el plan)
+- "¿Cuál es el plan del PUSC?" → party_general_plan (pregunta general sobre todo el plan)
+- "Resume el plan de gobierno del PNR" → party_general_plan (resumen completo)
+- "¿Qué proponen los partidos sobre seguridad?" → general_comparison (múltiples partidos)
+- "Compara las propuestas de PLN y PUSC" → general_comparison (comparación)
+- "¿Cuál es la mejor propuesta educativa?" → general_comparison (comparación implícita)
 
 Pregunta: {question}"""
 
