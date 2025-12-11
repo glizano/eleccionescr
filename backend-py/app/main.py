@@ -1,10 +1,12 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agents.graph import run_agent
 from app.models import AgentTrace, AskRequest, AskResponse, Source
+from app.services.langfuse_service import shutdown_langfuse
 
 # Configure logging
 logging.basicConfig(
@@ -12,11 +14,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan context manager"""
+    # Startup
+    logger.info("Application starting up...")
+    yield
+    # Shutdown
+    logger.info("Shutting down Langfuse client...")
+    shutdown_langfuse()
+
+
 # Create FastAPI app
 app = FastAPI(
     title="EleccionesCR 2026 - Agent-based RAG API",
     description="Intelligent agent system for Costa Rica 2026 election plans",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 # CORS
@@ -49,8 +64,8 @@ async def ask(request: AskRequest, req: Request):
     try:
         logger.info(f"[API] Question received: {request.question[:100]}...")
 
-        # Run agent workflow
-        result = run_agent(request.question)
+        # Run agent workflow with session_id for Langfuse tracing
+        result = run_agent(request.question, session_id=request.session_id)
 
         # Build response
         response = AskResponse(

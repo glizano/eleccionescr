@@ -1,38 +1,23 @@
-# Multi-stage Dockerfile for backend-py with uv
-FROM ghcr.io/astral-sh/uv:0.5.11-python3.11-bookworm as builder
-
-# Set working directory
-WORKDIR /app
-
-# Copy dependency files
-COPY pyproject.toml .
-COPY .python-version .
-
-# Create virtual environment and install dependencies with uv
-RUN uv venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-RUN uv sync --no-dev
-
-# Production stage
-FROM python:3.11-bookworm
+# Dockerfile for backend-py with uv
+FROM python:3.13-slim-bookworm
 
 # Set environment variables
-ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
 
 # Set working directory
 WORKDIR /app
 
-# Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
+# Install uv for fast dependency installation
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /usr/local/bin/uv
+
+# Copy dependency files and install
+COPY pyproject.toml uv.lock ./
+RUN uv export --no-dev --frozen | uv pip install --system -r -
 
 # Copy application code
-COPY app/ /app/app/
-COPY main.py /app/
-COPY run.py /app/
-COPY pyproject.toml /app/
-COPY .python-version /app/
+COPY app/ ./app/
+COPY main.py run.py ./
 
 # Expose port
 EXPOSE 8000
