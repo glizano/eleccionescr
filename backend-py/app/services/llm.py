@@ -1,63 +1,48 @@
+"""
+LLM service module.
+
+Provides a simple interface to use LangChain chat models.
+"""
+
 import logging
-from functools import lru_cache
+from typing import Any
 
-from google import genai
-from google.genai import types
+from langchain_core.language_models import BaseChatModel
 
-from app.config import settings
+from app.services.llm_providers import get_llm_provider
 
-
-@lru_cache(maxsize=1)
-def get_client():
-    """Get Google GenAI client (cached)"""
-    return genai.Client(api_key=settings.google_api_key)
+logger = logging.getLogger(__name__)
 
 
-def generate_text(prompt: str) -> str:
-    """Generate text using Gemini"""
-    client = get_client()
+def get_llm() -> BaseChatModel:
+    """
+    Get the configured LangChain chat model.
+
+    Returns:
+        The configured LangChain BaseChatModel instance.
+    """
+    return get_llm_provider()
+
+
+def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
+    """
+    Generate text using the configured LLM.
+
+    Args:
+        prompt: The input prompt to generate text from.
+        langfuse_trace: Optional Langfuse trace for observability.
+
+    Returns:
+        The generated text response.
+    """
+    llm = get_llm()
+    model_name = getattr(llm, "model_name", type(llm).__name__)
+    logger.info(f"Using LLM: {model_name}")
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                max_output_tokens=2048,  # Increased for longer responses
-                safety_settings=[
-                    types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
-                    types.SafetySetting(
-                        category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
-                    ),
-                    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
-                    types.SafetySetting(
-                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
-                    ),
-                ],
-            ),
-        )
-
-        logging.info(
-            f"LLM finish_reason: {response.candidates[0].finish_reason if response.candidates else 'NO_CANDIDATES'}"
-        )
-
-        # Get the text from response
-        if response.candidates and len(response.candidates) > 0:
-            candidate = response.candidates[0]
-            if candidate.content and candidate.content.parts:
-                text = "".join(
-                    part.text for part in candidate.content.parts if hasattr(part, "text")
-                )
-                if text:
-                    logging.info(f"Generated text length: {len(text)}")
-                    return text
-
-        # Fallback: try response.text
-        if hasattr(response, "text") and response.text:
-            return response.text
-
-        return "No se pudo generar una respuesta válida."
-
+        # TODO: Integrate langfuse_trace for observability when invoking
+        response = llm.invoke(prompt)
+        return response.content
     except Exception as e:
-        logging.error(f"Error generating text: {e}", exc_info=True)
+        logger.error(f"Error generating text: {e}")
         return f"Error al generar respuesta: {str(e)}"

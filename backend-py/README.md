@@ -151,10 +151,50 @@ Variables en `.env`:
 
 ```bash
 QDRANT_URL=http://localhost:6333
-GOOGLE_API_KEY=tu_key_aqui
 PORT=8000
 DEBUG=true
+
+# LLM Provider Selection: "google" or "openai"
+LLM_PROVIDER=google
+
+# Google AI (required if LLM_PROVIDER=google)
+GOOGLE_API_KEY=tu_key_aqui
+GOOGLE_MODEL=gemini-2.5-flash
+# Safety threshold: BLOCK_NONE, BLOCK_ONLY_HIGH, BLOCK_MEDIUM_AND_ABOVE (default), BLOCK_LOW_AND_ABOVE
+GOOGLE_SAFETY_THRESHOLD=BLOCK_MEDIUM_AND_ABOVE
+
+# OpenAI (required if LLM_PROVIDER=openai)
+OPENAI_API_KEY=tu_openai_key_aqui
+OPENAI_MODEL=gpt-4o-mini
 ```
+
+### Proveedores de LLM Soportados
+
+El sistema usa **LangChain** para abstraer los proveedores de LLM, soportando:
+
+| Proveedor | Variable de entorno | Modelos disponibles | LangChain Class |
+|-----------|---------------------|---------------------|-----------------|
+| Google Gemini | `LLM_PROVIDER=google` | gemini-2.5-flash (default), gemini-1.5-pro, etc. | `ChatGoogleGenerativeAI` |
+| OpenAI | `LLM_PROVIDER=openai` | gpt-4o-mini (default), gpt-4o, gpt-4-turbo, etc. | `ChatOpenAI` |
+
+Para cambiar de proveedor, simplemente modifica `LLM_PROVIDER` en tu archivo `.env` y proporciona la API key correspondiente.
+
+#### Agregar un Nuevo Proveedor
+
+Gracias a las abstracciones de LangChain, es fácil agregar nuevos proveedores (Anthropic Claude, Cohere, etc.):
+
+1. Agrega la dependencia de LangChain para el proveedor (ej: `langchain-anthropic`)
+2. Crea una función `create_provider()` en `app/services/llm_providers/`
+3. Actualiza la factory en `factory.py`
+
+### Configuración de Seguridad (Google Gemini)
+
+Para Google Gemini, puedes configurar el nivel de filtros de seguridad con `GOOGLE_SAFETY_THRESHOLD`:
+
+- `BLOCK_MEDIUM_AND_ABOVE` (default): Bloquea contenido con nivel medio o superior (recomendado)
+- `BLOCK_ONLY_HIGH`: Solo bloquea contenido de alto riesgo
+- `BLOCK_LOW_AND_ABOVE`: Bloquea incluso contenido de bajo riesgo (más restrictivo)
+- `BLOCK_NONE`: Desactiva los filtros de seguridad (no recomendado para producción)
 
 ## 📊 Ventajas vs Versión Anterior
 
