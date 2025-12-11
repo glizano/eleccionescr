@@ -116,7 +116,8 @@ async def ask(ask_request: AskRequest, request: Request):
 
 
 @app.get("/api/parties")
-async def list_parties():
+@limiter.limit(f"{settings.max_requests_per_minute}/minute")
+async def list_parties(request: Request):
     """List known political parties"""
     from app.agents.classifier import KNOWN_PARTIES
 
