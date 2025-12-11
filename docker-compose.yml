@@ -73,10 +73,17 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - QDRANT_URL=http://qdrant:6333
+      - LLM_PROVIDER=${LLM_PROVIDER:-google}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+      - GOOGLE_MODEL=${GOOGLE_MODEL:-gemini-2.5-flash}
+      - GOOGLE_SAFETY_THRESHOLD=${GOOGLE_SAFETY_THRESHOLD:-BLOCK_MEDIUM_AND_ABOVE}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-sentence_transformers}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - QDRANT_URL=http://qdrant:6333
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-http://langfuse:3000}
       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
       - PORT=8000
@@ -129,6 +136,12 @@ services:
     container_name: ingest
     environment:
       - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - QDRANT_COLLECTION=${QDRANT_COLLECTION:-planes_gobierno}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-sentence_transformers}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATA_DIR=/app/data
     depends_on:
       qdrant:
         condition: service_healthy
