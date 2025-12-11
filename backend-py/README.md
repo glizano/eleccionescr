@@ -167,12 +167,11 @@ GOOGLE_SAFETY_THRESHOLD=BLOCK_MEDIUM_AND_ABOVE
 OPENAI_API_KEY=tu_openai_key_aqui
 OPENAI_MODEL=gpt-4o-mini
 
-# Rate Limiting (requests per minute)
-MAX_REQUESTS_PER_MINUTE=20
-
-# Authentication (optional)
-REQUIRE_AUTH=false
-API_KEY=your_secret_api_key_here
+# Rate Limiting (para controlar costos de LLM)
+# Límites por dirección IP
+MAX_REQUESTS_PER_MINUTE=10
+MAX_REQUESTS_PER_HOUR=30
+MAX_REQUESTS_PER_DAY=100
 ```
 
 ### Proveedores de LLM Soportados
@@ -203,37 +202,70 @@ Para Google Gemini, puedes configurar el nivel de filtros de seguridad con `GOOG
 - `BLOCK_LOW_AND_ABOVE`: Bloquea incluso contenido de bajo riesgo (más restrictivo)
 - `BLOCK_NONE`: Desactiva los filtros de seguridad (no recomendado para producción)
 
-### Autenticación y Rate Limiting
+### Rate Limiting para Servicio Público
 
-El backend incluye soporte para autenticación con API key y rate limiting para proteger el servicio:
+Este backend está diseñado para ser **público y accesible** sin barreras de autenticación, pero con **protección contra uso excesivo** para controlar los costos de LLM.
 
-#### Autenticación (Opcional)
+#### Sistema de Rate Limiting por IP
 
-Para habilitar la autenticación con API key:
+El rate limiting está **siempre habilitado** con múltiples niveles de protección:
 
-1. Configura `REQUIRE_AUTH=true` en tu archivo `.env`
-2. Establece un API key seguro en `API_KEY`
-3. Los clientes deben incluir el header `X-API-Key` en sus peticiones:
+- **Por minuto**: `MAX_REQUESTS_PER_MINUTE=10` (default: 10 requests/minuto)
+- **Por hora**: `MAX_REQUESTS_PER_HOUR=30` (default: 30 requests/hora)
+- **Por día**: `MAX_REQUESTS_PER_DAY=100` (default: 100 requests/día)
+
+El límite se aplica por **dirección IP**, permitiendo acceso público pero previniendo abuso.
+
+#### Cómo Funciona
+
+1. **Sin autenticación requerida**: Los usuarios pueden usar el servicio directamente
+2. **Tracking por IP**: Se rastrea el uso por dirección IP del cliente
+3. **Múltiples ventanas de tiempo**: Protección a corto (minuto), mediano (hora) y largo plazo (día)
+4. **Integrado con Langfuse**: Todo el uso se registra para análisis de costos
+5. **Respuesta 429**: Cuando se excede un límite, se retorna HTTP 429 (Too Many Requests)
+
+#### Ejemplo de Uso
 
 ```bash
+# Uso normal - sin headers especiales requeridos
 curl -X POST http://localhost:8000/api/ask \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your_secret_api_key_here" \
   -d '{"question": "¿Qué propone el PLN sobre educación?"}'
+
+# Con session_id para tracking en Langfuse
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "¿Qué propone el PLN sobre educación?",
+    "session_id": "user-browser-session-123"
+  }'
 ```
 
-**Nota:** El endpoint `/health` NO requiere autenticación y siempre está disponible para health checks.
+#### Ajustar Límites
 
-#### Rate Limiting
+Para modificar los límites según tu presupuesto de LLM:
 
-El rate limiting está **siempre habilitado** y se aplica a todos los endpoints de la API (excepto `/health`):
+```bash
+# Para desarrollo/testing (límites más altos)
+MAX_REQUESTS_PER_MINUTE=50
+MAX_REQUESTS_PER_HOUR=200
+MAX_REQUESTS_PER_DAY=1000
 
-- Configuración: `MAX_REQUESTS_PER_MINUTE` (default: 20)
-- Se basa en la dirección IP del cliente
-- Integrado con Langfuse para trazabilidad
-- Responde con status code 429 cuando se excede el límite
+# Para producción con presupuesto limitado (más restrictivo)
+MAX_REQUESTS_PER_MINUTE=5
+MAX_REQUESTS_PER_HOUR=15
+MAX_REQUESTS_PER_DAY=50
+```
 
-El rate limiting funciona independientemente de si la autenticación está habilitada o no.
+#### Monitoreo con Langfuse
+
+Todos los requests se registran en Langfuse (si está habilitado) con:
+- Session ID del usuario
+- Metadata de costos por request
+- Análisis de uso por IP/sesión
+- Métricas de rate limiting
+
+Esto permite monitorear costos reales y ajustar límites según necesidad.
 
 ## 📊 Ventajas vs Versión Anterior
 
