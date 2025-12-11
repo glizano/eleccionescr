@@ -40,9 +40,18 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
     logger.info(f"Using LLM: {model_name}")
 
     try:
-        # TODO: Integrate langfuse_trace for observability when invoking
-        response = llm.invoke(prompt)
+        # Integrate with Langfuse for observability
+        if langfuse_trace:
+            generation = langfuse_trace.generation(
+                name="llm-generation",
+                model=model_name,
+                input=prompt[:500],  # Truncate for logging
+            )
+            response = llm.invoke(prompt)
+            generation.end(output=response.content[:500])
+        else:
+            response = llm.invoke(prompt)
         return response.content
     except Exception as e:
-        logger.error(f"Error generating text: {e}")
-        return f"Error al generar respuesta: {str(e)}"
+        logger.error(f"Error generating text: {e}", exc_info=True)
+        raise RuntimeError(f"Error al generar respuesta: {str(e)}") from e

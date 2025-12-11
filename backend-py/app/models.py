@@ -9,9 +9,23 @@ class ConversationMessage(BaseModel):
 
 
 class AskRequest(BaseModel):
-    question: str = Field(..., min_length=3, max_length=500)
-    last_messages: list[ConversationMessage] | None = None
-    session_id: str | None = None
+    question: str = Field(
+        ...,
+        min_length=3,
+        max_length=500,
+        description="User's question about government plans",
+        examples=["¿Qué propone el PLN sobre educación?"]
+    )
+    last_messages: list[ConversationMessage] | None = Field(
+        None,
+        description="Previous conversation messages for context",
+        max_length=10
+    )
+    session_id: str | None = Field(
+        None,
+        description="Session ID for tracking conversation history",
+        max_length=100
+    )
 
 
 class Source(BaseModel):

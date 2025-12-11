@@ -65,7 +65,8 @@
 
     try {
       // 3. Call API
-      const response = await fetch('http://localhost:8000/api/ask', {
+      const backendUrl = import.meta.env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${backendUrl}/api/ask`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

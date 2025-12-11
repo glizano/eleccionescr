@@ -20,6 +20,35 @@ async def lifespan(app: FastAPI):
     """Application lifespan context manager"""
     # Startup
     logger.info("Application starting up...")
+    
+    # Validate required configuration
+    from app.config import settings
+    
+    # Check LLM API keys
+    if settings.llm_provider == "google" and not settings.google_api_key:
+        logger.error("GOOGLE_API_KEY is required when LLM_PROVIDER=google")
+        raise ValueError("Missing GOOGLE_API_KEY environment variable")
+    elif settings.llm_provider == "openai" and not settings.openai_api_key:
+        logger.error("OPENAI_API_KEY is required when LLM_PROVIDER=openai")
+        raise ValueError("Missing OPENAI_API_KEY environment variable")
+    
+    # Check embedding API keys if using OpenAI embeddings
+    if settings.embedding_provider == "openai" and not settings.openai_api_key:
+        logger.error("OPENAI_API_KEY is required when EMBEDDING_PROVIDER=openai")
+        raise ValueError("Missing OPENAI_API_KEY for embeddings")
+    
+    logger.info(f"✅ Configuration validated: LLM={settings.llm_provider}, Embeddings={settings.embedding_provider}")
+    
+    # Test Qdrant connection
+    try:
+        from app.services.qdrant import get_qdrant_client
+        client = get_qdrant_client()
+        collections = client.get_collections()
+        logger.info(f"✅ Qdrant connection successful: {len(collections.collections)} collections")
+    except Exception as e:
+        logger.warning(f"⚠️  Qdrant connection check failed: {e}")
+        logger.warning("The API will start but RAG queries may fail")
+    
     yield
     # Shutdown
     logger.info("Shutting down Langfuse client...")
@@ -34,13 +63,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
+# CORS Configuration
+from app.config import settings
+
+# Parse CORS origins from configuration
+cors_origins = settings.cors_origins.split(",") if settings.cors_origins != "*" else ["*"]
+
+if settings.environment == "production" and "*" in cors_origins:
+    logger.warning("⚠️  CORS is configured to allow all origins in production. Consider restricting this.")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 

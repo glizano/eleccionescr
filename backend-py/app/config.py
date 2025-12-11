@@ -41,11 +41,17 @@ class Settings(BaseSettings):
     port: int = 8000
     reload: bool = True
 
+    # CORS Configuration
+    cors_origins: str = "*"  # Comma-separated list of allowed origins, or "*" for all
+    
     # Rate limiting
     max_requests_per_minute: int = 20
 
     # Logging
     log_level: str = "INFO"
+    
+    # Environment
+    environment: Literal["development", "production"] = "development"
 
 
 settings = Settings()

@@ -11,6 +11,11 @@ from pypdf import PdfReader
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
@@ -206,22 +211,52 @@ def process_file(qc, path: Path, partido: str):
     return True
 
 def ingest():
+    """Main ingestion function that processes all PDFs in the data directory."""
+    # Validate data directory exists
+    if not DATA_DIR.exists():
+        logger.error(f"Data directory does not exist: {DATA_DIR}")
+        logger.info(f"Please create the directory and add PDF files: mkdir -p {DATA_DIR}")
+        raise FileNotFoundError(f"Data directory not found: {DATA_DIR}")
+    
+    # Check for PDF files
+    pdf_files = list(DATA_DIR.glob("*.pdf"))
+    if not pdf_files:
+        logger.warning(f"No PDF files found in {DATA_DIR}")
+        logger.info("Please add PDF files to the data directory")
+        return
+    
+    logger.info(f"Found {len(pdf_files)} PDF files to process")
+    
     qc = init_qdrant()
 
-    # Define files and mapping to partido (you should adapt this list)
     # Auto-scan folder and use filename stem as party name
     mapping = []
-    for p in DATA_DIR.glob("*.pdf"):
+    for p in pdf_files:
         # Map known filenames to full names if desired, else use stem
         stem = p.stem
         # Simple heuristic or lookup could go here
         mapping.append((p.name, stem))
 
+    processed = 0
+    skipped = 0
+    failed = 0
+
     for fname, partido in mapping:
         p = DATA_DIR / fname
         if not p.exists():
-            print("Missing file", p)
+            logger.warning(f"Missing file: {p}")
+            failed += 1
             continue
-        process_file(qc, p, partido)
+        try:
+            result = process_file(qc, p, partido)
+            if result:
+                processed += 1
+            else:
+                skipped += 1
+        except Exception as e:
+            logger.error(f"Failed to process {fname}: {e}", exc_info=True)
+            failed += 1
 
-    print("Done.")
+    logger.info("="*50)
+    logger.info(f"Ingestion complete: {processed} processed, {skipped} skipped, {failed} failed")
+    logger.info("="*50)
