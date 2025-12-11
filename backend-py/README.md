@@ -64,7 +64,7 @@ El servidor estará en `http://localhost:8000`
 
 ## 📝 Uso
 
-### Pregunta específica de partido
+### Pregunta específica de partido (tema concreto)
 
 ```bash
 curl -X POST http://localhost:8000/api/ask \
@@ -85,6 +85,33 @@ curl -X POST http://localhost:8000/api/ask \
       "Intent: specific_party",
       "Parties: ['PLN']",
       "Retrieved 5 chunks",
+      "Response generated"
+    ]
+  }
+}
+```
+
+### Pregunta de plan completo de partido (nuevo)
+
+```bash
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "¿Qué plantea el plan del PLN?"
+  }'
+```
+
+**Trace del agente:**
+```json
+{
+  "agent_trace": {
+    "intent": "party_general_plan",
+    "parties_detected": ["PLN"],
+    "chunks_retrieved": 15,
+    "steps": [
+      "Intent: party_general_plan",
+      "Parties: ['PLN']",
+      "Retrieved 15 chunks",
       "Response generated"
     ]
   }
@@ -125,8 +152,9 @@ Visita `http://localhost:8000/docs` para la documentación Swagger UI.
 
 ### Intent Classifier Agent
 Clasifica la pregunta en:
-- `specific_party`: Pregunta sobre un partido específico
-- `general_comparison`: Pregunta general o comparativa
+- `specific_party`: Pregunta sobre un tema específico de un partido (ej: "¿Qué propone el PLN sobre educación?")
+- `party_general_plan`: Pregunta que solicita un resumen completo del plan de un partido (ej: "¿Qué plantea el plan del PLN?")
+- `general_comparison`: Pregunta general o comparativa entre partidos
 - `unclear`: No está claro
 
 ### Party Extractor Agent
@@ -135,9 +163,10 @@ Extrae nombres de partidos mencionados usando LLM con few-shot examples.
 Partidos conocidos: PLN, PUSC, PNR, FA, PLP, PPSO, CAC
 
 ### RAG Agent
-Ejecuta búsqueda vectorial con:
-- **Filtro por partido** si intent = specific_party
-- **Sin filtro** si intent = general_comparison
+Ejecuta búsqueda vectorial con estrategias adaptativas:
+- **5 chunks filtrados** por partido si intent = specific_party (temas específicos)
+- **15 chunks filtrados** por partido si intent = party_general_plan (resumen completo)
+- **10 chunks balanceados** entre partidos si intent = general_comparison (2 por partido)
 
 ### Response Generator Agent
 Genera respuesta final con:
