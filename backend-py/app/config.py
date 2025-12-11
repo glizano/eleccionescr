@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     langfuse_host: str = "https://cloud.langfuse.com"
     langfuse_enabled: bool = False
 
+    # Embeddings
+    embedding_provider: Literal["sentence_transformers", "openai"] = "sentence_transformers"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+
     # Server
     host: str = "0.0.0.0"
     port: int = 8000

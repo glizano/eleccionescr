@@ -1,21 +1,71 @@
 import os
 import hashlib
-
+import logging
 import uuid
 from pathlib import Path
+
+from langchain_core.embeddings import Embeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from pypdf import PdfReader
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
-from sentence_transformers import SentenceTransformer
+
+logger = logging.getLogger(__name__)
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 COLLECTION = os.getenv("QDRANT_COLLECTION", "planes_gobierno")
 DATA_DIR = Path(os.getenv("DATA_DIR", "data/raw"))
 
-# Embedding model (local small)
-EMBED_MODEL = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-VECTOR_DIM = EMBED_MODEL.get_sentence_embedding_dimension()
+# Embedding configuration
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "sentence_transformers")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
+
+# Lazy initialization for embedding provider
+_embed_provider = None
+
+
+def get_embedding_provider() -> Embeddings:
+    """Get the configured embedding provider (lazy initialization).
+    
+    Returns:
+        A LangChain Embeddings instance.
+    """
+    global _embed_provider
+    if _embed_provider is not None:
+        return _embed_provider
+
+    model_name = EMBEDDING_MODEL
+
+    if EMBEDDING_PROVIDER == "openai":
+        # For OpenAI, use a default model if no specific model is configured
+        if model_name.startswith("sentence-transformers/"):
+            model_name = "text-embedding-3-small"
+        if not OPENAI_API_KEY:
+            raise ValueError("OpenAI API key is required for OpenAI embedding provider")
+        _embed_provider = OpenAIEmbeddings(model=model_name, api_key=OPENAI_API_KEY)
+        logger.info(f"Initialized OpenAI embeddings provider with model: {model_name}")
+    else:
+        # Default to HuggingFace (sentence-transformers)
+        _embed_provider = HuggingFaceEmbeddings(model_name=model_name)
+        logger.info(f"Initialized HuggingFace embeddings provider with model: {model_name}")
+
+    return _embed_provider
+
+
+def get_vector_dimension() -> int:
+    """Get the vector dimension for the configured embedding provider.
+    
+    Returns:
+        The dimension size of embedding vectors.
+    """
+    provider = get_embedding_provider()
+    # Get dimension by encoding a dummy text
+    test_embedding = provider.embed_query("test")
+    return len(test_embedding)
 
 # ---------- Helpers ----------
 def sha256_file(path: Path):
@@ -67,7 +117,7 @@ def init_qdrant():
     if COLLECTION not in collections:
         qc.create_collection(
             collection_name=COLLECTION,
-            vectors_config=VectorParams(size=VECTOR_DIM, distance=Distance.COSINE)
+            vectors_config=VectorParams(size=get_vector_dimension(), distance=Distance.COSINE)
         )
         print("Created collection", COLLECTION)
     return qc
@@ -91,7 +141,8 @@ def delete_doc_points(qc: QdrantClient, doc_id: str):
         print("Delete error:", e)
 
 def upsert_chunks(qc: QdrantClient, chunks, doc_id, filename, partido, file_hash):
-    embeddings = EMBED_MODEL.encode(chunks, show_progress_bar=False)
+    provider = get_embedding_provider()
+    embeddings = provider.embed_documents(chunks)
     points = []
     for i, (chunk, vec) in enumerate(zip(chunks, embeddings)):
         pid = str(uuid.uuid4())
@@ -103,7 +154,7 @@ def upsert_chunks(qc: QdrantClient, chunks, doc_id, filename, partido, file_hash
             "chunk_index": i,
             "file_hash": file_hash
         }
-        points.append(PointStruct(id=pid, vector=vec.tolist(), payload=payload))
+        points.append(PointStruct(id=pid, vector=vec, payload=payload))
     # upsert in batches
     BATCH = 64
     for i in range(0, len(points), BATCH):
