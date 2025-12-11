@@ -35,7 +35,6 @@ class Settings(BaseSettings):
     # Embeddings
     embedding_provider: Literal["sentence_transformers", "openai"] = "sentence_transformers"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    openai_api_key: str = ""
 
     # Server
     host: str = "0.0.0.0"
