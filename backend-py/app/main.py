@@ -1,11 +1,16 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app.agents.graph import run_agent
+from app.config import settings
 from app.models import AgentTrace, AskRequest, AskResponse, Source
+from app.services.auth import verify_api_key
 from app.services.langfuse_service import shutdown_langfuse
 
 # Configure logging
@@ -20,11 +25,17 @@ async def lifespan(app: FastAPI):
     """Application lifespan context manager"""
     # Startup
     logger.info("Application starting up...")
+    if settings.require_auth:
+        logger.info("API authentication is enabled")
+    logger.info(f"Rate limiting: {settings.max_requests_per_minute} requests/minute")
     yield
     # Shutdown
     logger.info("Shutting down Langfuse client...")
     shutdown_langfuse()
 
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
 # Create FastAPI app
 app = FastAPI(
@@ -33,6 +44,10 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan,
 )
+
+# Add rate limiter state and exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS
 app.add_middleware(
@@ -50,7 +65,8 @@ async def health():
     return {"status": "ok", "version": "2.0.0"}
 
 
-@app.post("/api/ask", response_model=AskResponse)
+@app.post("/api/ask", response_model=AskResponse, dependencies=[Depends(verify_api_key)])
+@limiter.limit(f"{settings.max_requests_per_minute}/minute")
 async def ask(request: AskRequest, req: Request):
     """
     Main RAG endpoint with intelligent agent routing
@@ -60,6 +76,8 @@ async def ask(request: AskRequest, req: Request):
     2. Extract party names if applicable
     3. Execute filtered or broad RAG search
     4. Generate response with citations
+
+    Requires API key authentication (if enabled) and is rate limited.
     """
     try:
         logger.info(f"[API] Question received: {request.question[:100]}...")

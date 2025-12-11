@@ -47,5 +47,9 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Authentication
+    api_key: str = ""
+    require_auth: bool = False
+
 
 settings = Settings()

@@ -166,6 +166,13 @@ GOOGLE_SAFETY_THRESHOLD=BLOCK_MEDIUM_AND_ABOVE
 # OpenAI (required if LLM_PROVIDER=openai)
 OPENAI_API_KEY=tu_openai_key_aqui
 OPENAI_MODEL=gpt-4o-mini
+
+# Rate Limiting (requests per minute)
+MAX_REQUESTS_PER_MINUTE=20
+
+# Authentication (optional)
+REQUIRE_AUTH=false
+API_KEY=your_secret_api_key_here
 ```
 
 ### Proveedores de LLM Soportados
@@ -195,6 +202,38 @@ Para Google Gemini, puedes configurar el nivel de filtros de seguridad con `GOOG
 - `BLOCK_ONLY_HIGH`: Solo bloquea contenido de alto riesgo
 - `BLOCK_LOW_AND_ABOVE`: Bloquea incluso contenido de bajo riesgo (más restrictivo)
 - `BLOCK_NONE`: Desactiva los filtros de seguridad (no recomendado para producción)
+
+### Autenticación y Rate Limiting
+
+El backend incluye soporte para autenticación con API key y rate limiting para proteger el servicio:
+
+#### Autenticación (Opcional)
+
+Para habilitar la autenticación con API key:
+
+1. Configura `REQUIRE_AUTH=true` en tu archivo `.env`
+2. Establece un API key seguro en `API_KEY`
+3. Los clientes deben incluir el header `X-API-Key` en sus peticiones:
+
+```bash
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_secret_api_key_here" \
+  -d '{"question": "¿Qué propone el PLN sobre educación?"}'
+```
+
+**Nota:** El endpoint `/health` NO requiere autenticación y siempre está disponible para health checks.
+
+#### Rate Limiting
+
+El rate limiting está **siempre habilitado** y se aplica a todos los endpoints de la API (excepto `/health`):
+
+- Configuración: `MAX_REQUESTS_PER_MINUTE` (default: 20)
+- Se basa en la dirección IP del cliente
+- Integrado con Langfuse para trazabilidad
+- Responde con status code 429 cuando se excede el límite
+
+El rate limiting funciona independientemente de si la autenticación está habilitada o no.
 
 ## 📊 Ventajas vs Versión Anterior
 
