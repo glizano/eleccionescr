@@ -113,3 +113,18 @@ def test_parties_endpoint_public(client):
     assert response.status_code == 200
     assert "parties" in response.json()
     assert isinstance(response.json()["parties"], list)
+
+
+def test_config_endpoint_returns_rate_limits(client):
+    """Test that /api/config endpoint returns rate limit configuration."""
+
+    response = client.get("/api/config")
+    assert response.status_code == 200
+    data = response.json()
+    assert "rate_limits" in data
+    assert "per_minute" in data["rate_limits"]
+    assert "per_hour" in data["rate_limits"]
+    assert "per_day" in data["rate_limits"]
+    assert isinstance(data["rate_limits"]["per_minute"], int)
+    assert isinstance(data["rate_limits"]["per_hour"], int)
+    assert isinstance(data["rate_limits"]["per_day"], int)

@@ -122,3 +122,15 @@ async def list_parties(request: Request):
     from app.agents.classifier import KNOWN_PARTIES
 
     return {"parties": KNOWN_PARTIES}
+
+
+@app.get("/api/config")
+async def get_config():
+    """Get public API configuration including rate limits"""
+    return {
+        "rate_limits": {
+            "per_minute": settings.max_requests_per_minute,
+            "per_hour": settings.max_requests_per_hour,
+            "per_day": settings.max_requests_per_day,
+        }
+    }
