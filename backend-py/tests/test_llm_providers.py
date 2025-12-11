@@ -5,7 +5,6 @@ Tests for LLM providers using LangChain abstractions.
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from langchain_core.language_models import BaseChatModel
 
 from app.services.llm_providers.factory import create_llm_provider
