@@ -41,8 +41,11 @@ class Settings(BaseSettings):
     port: int = 8000
     reload: bool = True
 
-    # Rate limiting
-    max_requests_per_minute: int = 20
+    # Rate limiting (para controlar costos de LLM en servicio público)
+    # Límites por IP (usuarios anónimos)
+    max_requests_per_minute: int = 10
+    max_requests_per_hour: int = 30
+    max_requests_per_day: int = 100
 
     # Logging
     log_level: str = "INFO"

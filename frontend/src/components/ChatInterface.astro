@@ -40,6 +40,23 @@
   const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
 
   let isLoading = false;
+  let rateLimits = { per_minute: 10, per_hour: 30, per_day: 100 }; // Default values
+
+  // Fetch rate limit configuration on load
+  async function loadRateLimits() {
+    try {
+      const response = await fetch('http://localhost:8000/api/config');
+      if (response.ok) {
+        const config = await response.json();
+        rateLimits = config.rate_limits;
+      }
+    } catch (error) {
+      console.warn('Could not load rate limit config, using defaults', error);
+    }
+  }
+
+  // Load config when page loads
+  loadRateLimits();
 
   // Enable/disable button based on input
   userInput?.addEventListener('input', () => {
@@ -72,6 +89,14 @@
         },
         body: JSON.stringify({ question }),
       });
+
+      // Handle rate limit error (429)
+      if (response.status === 429) {
+        removeMessage(loadingId);
+        const limitMsg = `⏱️ **Límite de peticiones alcanzado**\n\nHas superado el número máximo de consultas permitidas. Por favor, espera un momento antes de intentar nuevamente.\n\n_Límites: ${rateLimits.per_minute} por minuto, ${rateLimits.per_hour} por hora, ${rateLimits.per_day} por día._`;
+        addMessage(limitMsg, 'bot error');
+        return;
+      }
 
       if (!response.ok) throw new Error('Error en la conexión');
 
@@ -254,9 +279,13 @@
   }
   
   .message.error .message-content {
-    background: #fee2e2;
-    color: #991b1b;
-    border: 1px solid #fca5a5;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fbbf24;
+  }
+  
+  .message.error .message-content strong {
+    color: #92400e;
   }
 
   .message-content {

@@ -86,6 +86,9 @@ services:
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-http://langfuse:3000}
       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+      - MAX_REQUESTS_PER_MINUTE=${MAX_REQUESTS_PER_MINUTE:-10}
+      - MAX_REQUESTS_PER_HOUR=${MAX_REQUESTS_PER_HOUR:-30}
+      - MAX_REQUESTS_PER_DAY=${MAX_REQUESTS_PER_DAY:-100}
       - PORT=8000
       - DEBUG=true
     depends_on:
@@ -141,7 +144,7 @@ services:
       - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-sentence_transformers}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - DATA_DIR=/app/data
+      - DATA_DIR=/app/data/raw
     depends_on:
       qdrant:
         condition: service_healthy
