@@ -37,9 +37,17 @@ User Question
 
 ### 1. Instalar dependencias
 
+**Para desarrollo local** (incluye sentence-transformers para embeddings gratis):
+```bash
+uv sync --group dev
+```
+
+**Solo producción** (excluye dependencias pesadas):
 ```bash
 uv sync
 ```
+
+> 💡 **Nota**: Las dependencias de ML pesadas (sentence-transformers, PyTorch) están en el grupo `dev` para mantener la imagen Docker de producción <1 GB. Ver [DEPLOYMENT_OPTIMIZATION.md](../DEPLOYMENT_OPTIMIZATION.md) para más detalles.
 
 ### 2. Configurar variables de entorno
 

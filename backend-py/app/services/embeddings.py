@@ -8,10 +8,17 @@ import logging
 from functools import lru_cache
 
 from langchain_core.embeddings import Embeddings
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
 from app.config import settings
+
+# Import HuggingFace only if available (dev dependency)
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+
+    HUGGINGFACE_AVAILABLE = True
+except ImportError:
+    HUGGINGFACE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +44,17 @@ def get_embedding_provider() -> Embeddings:
         logger.info(f"Initialized OpenAI embeddings provider with model: {model_name}")
         return embeddings
     else:
-        # Default to HuggingFace (sentence-transformers)
+        # Default to HuggingFace (sentence-transformers) if available
+        if not HUGGINGFACE_AVAILABLE:
+            logger.error(
+                "HuggingFace embeddings not available in this deployment. "
+                "Please set EMBEDDING_PROVIDER=openai and provide OPENAI_API_KEY, "
+                "or install dev dependencies: uv sync --group dev"
+            )
+            raise ValueError(
+                "HuggingFace embeddings not available. "
+                "Use EMBEDDING_PROVIDER=openai or install dev dependencies."
+            )
         embeddings = HuggingFaceEmbeddings(model_name=model_name)
         logger.info(f"Initialized HuggingFace embeddings provider with model: {model_name}")
         return embeddings

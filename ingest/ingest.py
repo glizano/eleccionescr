@@ -9,7 +9,15 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from pypdf import PdfReader
 from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import (
+    VectorParams,
+    Distance,
+    PointStruct,
+    Filter,
+    FieldCondition,
+    MatchValue,
+    PayloadSchemaType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +128,44 @@ def init_qdrant():
             vectors_config=VectorParams(size=get_vector_dimension(), distance=Distance.COSINE)
         )
         print("Created collection", COLLECTION)
+        
+        # Create payload indexes for filtering
+        qc.create_payload_index(
+            collection_name=COLLECTION,
+            field_name="doc_id",
+            field_schema=PayloadSchemaType.KEYWORD
+        )
+        qc.create_payload_index(
+            collection_name=COLLECTION,
+            field_name="partido",
+            field_schema=PayloadSchemaType.KEYWORD
+        )
+        print("Created payload indexes for doc_id and partido")
+    else:
+        # If collection exists, ensure indexes are created (for existing collections)
+        try:
+            qc.create_payload_index(
+                collection_name=COLLECTION,
+                field_name="doc_id",
+                field_schema=PayloadSchemaType.KEYWORD
+            )
+            print("Created payload index for doc_id")
+        except Exception as e:
+            # Index might already exist, that's ok
+            if "already exists" not in str(e).lower():
+                print(f"Note: Could not create doc_id index: {e}")
+        
+        try:
+            qc.create_payload_index(
+                collection_name=COLLECTION,
+                field_name="partido",
+                field_schema=PayloadSchemaType.KEYWORD
+            )
+            print("Created payload index for partido")
+        except Exception as e:
+            # Index might already exist, that's ok
+            if "already exists" not in str(e).lower():
+                print(f"Note: Could not create partido index: {e}")
     return qc
 
 # ---------- Upsert document (delete old + insert new) ----------

@@ -32,9 +32,9 @@ class Settings(BaseSettings):
     langfuse_host: str = "https://cloud.langfuse.com"
     langfuse_enabled: bool = False
 
-    # Embeddings
-    embedding_provider: Literal["sentence_transformers", "openai"] = "sentence_transformers"
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    # Embeddings (use openai for production to reduce Docker image size)
+    embedding_provider: Literal["sentence_transformers", "openai"] = "openai"
+    embedding_model: str = "text-embedding-3-small"
 
     # Server
     host: str = "0.0.0.0"
