@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload coverage reports
         if: always() && hashFiles('backend-py/tests/**') != ''
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./backend-py/coverage.xml
           flags: backend
