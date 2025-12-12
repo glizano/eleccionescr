@@ -70,35 +70,58 @@ def rag_search_node(state: AgentState) -> AgentState:
         contexts = search_qdrant(query_vector=query_vector, partido_filter=partido_filter, limit=15)
 
     elif state["intent"] == "general_comparison":
-        # Strategy 3: General question - get chunks from multiple parties
-        logger.info("[Agent] General question - searching across all parties")
+        # Strategy 3: General question - fetch per-party directly to guarantee coverage
+        logger.info("[Agent] General comparison - per-party targeted search (2 chunks each)")
 
-        # First, get top results without filter (more results for 20 parties)
-        all_results = search_qdrant(
-            query_vector=query_vector,
-            partido_filter=None,
-            limit=40,  # Increased to cover 20 parties (2 per party)
-        )
+        # Build list of known party abbreviations from metadata
+        try:
+            party_abbrs = [p["abbreviation"] for p in PARTIES_METADATA]
+        except Exception:
+            party_abbrs = []
 
-        # Group by party and take top 2 from each
-        from collections import defaultdict
+        per_party_limit = 2
+        # Total budget: prefer fairness (1 each) before second round
+        max_contexts = 40
 
-        by_party = defaultdict(list)
+        per_party_results: dict[str, list] = {}
+        missing: list[str] = []
 
-        for ctx in all_results:
-            partido = ctx.payload.get("partido", "Unknown")
-            by_party[partido].append(ctx)
+        # Query Qdrant for each party independently
+        for abbr in party_abbrs:
+            try:
+                results = search_qdrant(query_vector=query_vector, partido_filter=abbr, limit=per_party_limit)
+                if results:
+                    # sort just in case backend doesn't guarantee order
+                    results = sorted(results, key=lambda r: r.score, reverse=True)
+                    per_party_results[abbr] = results[:per_party_limit]
+                else:
+                    missing.append(abbr)
+            except Exception:
+                missing.append(abbr)
 
-        # Take top 2 chunks from each party (cover all 20 parties if relevant)
-        contexts = []
-        for _partido, chunks in sorted(by_party.items(), key=lambda x: x[0]):
-            contexts.extend(chunks[:2])  # Top 2 from each party
+        # Assemble contexts fairly: first pass 1 per party, then second pass 1 more per party
+        contexts: list = []
+        # Round 1: ensure at least one per party (when available)
+        for abbr in party_abbrs:
+            party_chunks = per_party_results.get(abbr, [])
+            if party_chunks:
+                contexts.append(party_chunks[0])
+            if len(contexts) >= max_contexts:
+                break
 
-        # Sort by score to keep best overall (increased to 20 for more coverage)
-        contexts = sorted(contexts, key=lambda x: x.score, reverse=True)[:20]
+        # Round 2: add the second chunk per party (if budget allows)
+        if len(contexts) < max_contexts:
+            for abbr in party_abbrs:
+                party_chunks = per_party_results.get(abbr, [])
+                if len(party_chunks) > 1:
+                    contexts.append(party_chunks[1])
+                if len(contexts) >= max_contexts:
+                    break
 
+        # Log coverage summary
+        covered = sorted({c.payload.get("partido", "Unknown") for c in contexts})
         logger.info(
-            f"[Agent] Retrieved chunks from {len(by_party)} parties: {sorted(by_party.keys())}"
+            f"[Agent] General comparison coverage: {len(covered)} parties -> {covered} (contexts: {len(contexts)}); missing-without-results: {missing}"
         )
 
     else:
