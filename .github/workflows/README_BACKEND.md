@@ -13,32 +13,41 @@ El workflow `backend.yml` se ejecuta automáticamente en los siguientes casos:
 ## 📋 Jobs
 
 ### 1. **Lint & Format Check**
+
 Verifica la calidad del código usando `ruff`:
+
 - ✅ Linting (errores de código, imports, naming conventions)
 - ✅ Format check (estilo de código consistente)
 
 **Configuración**: Ver `backend-py/ruff.toml`
 
 ### 2. **Run Tests**
+
 Ejecuta la suite de tests con pytest:
+
 - ✅ Levanta un servicio Qdrant en Docker
 - ✅ Ejecuta todos los tests en `tests/`
 - ✅ Genera reporte de cobertura
 - ✅ Sube cobertura a Codecov (opcional)
 
 **Dependencias**:
+
 - pytest
 - pytest-asyncio
 - pytest-cov
 - Qdrant (servicio Docker)
 
 ### 3. **Build & Validate**
+
 Valida que el código se puede importar y ejecutar:
+
 - ✅ Verifica imports de la aplicación
 - ✅ Valida dependencias con `uv pip check`
 
 ### 4. **Deploy to Production**
+
 Se ejecuta solo en push a `main`:
+
 - 🚀 Placeholder para deployment
 - Incluye ejemplos comentados para SSH y Docker
 
@@ -92,9 +101,11 @@ open htmlcov/index.html
 Configura estos secrets en GitHub (Settings → Secrets and variables → Actions):
 
 ### Para Tests
+
 - `GOOGLE_API_KEY`: API key de Google Gemini (para LLM)
 
 ### Para Deployment (opcional)
+
 - `SERVER_HOST`: Host del servidor de producción
 - `SERVER_USER`: Usuario SSH
 - `SSH_PRIVATE_KEY`: Llave privada SSH
@@ -113,19 +124,25 @@ Agrega estos badges al README principal:
 ## 🚀 Deployment
 
 ### Opción 1: SSH Deployment
+
 Descomenta la sección "Deploy to server" en `backend.yml` y configura:
+
 1. Los secrets necesarios
 2. La ruta del servidor
 3. El comando de restart del servicio
 
 ### Opción 2: Docker Deployment
+
 Descomenta la sección "Build and push Docker image" y:
+
 1. Crea un `Dockerfile` en `backend-py/`
 2. Configura Docker registry credentials
 3. Actualiza los tags de la imagen
 
 ### Opción 3: Cloud Platform
+
 Integra con tu plataforma preferida:
+
 - Google Cloud Run
 - AWS ECS/Fargate
 - Azure Container Apps

@@ -14,10 +14,10 @@
 
   <div class="input-area">
     <form id="chat-form" class="chat-form">
-      <input 
-        type="text" 
-        id="user-input" 
-        placeholder="Pregunta sobre los planes de gobierno... (ej: ¿Qué propone el [Partido Político] en seguridad?)" 
+      <input
+        type="text"
+        id="user-input"
+        placeholder="Pregunta sobre los planes de gobierno... (ej: ¿Qué propone el [Partido Político] en seguridad?)"
         autocomplete="off"
       />
       <button type="submit" id="send-btn" disabled>
@@ -41,7 +41,7 @@
 
   let isLoading = false;
   let rateLimits = { per_minute: 10, per_hour: 30, per_day: 100 }; // Default values
-  
+
   // Get backend URL from environment variable
   const BACKEND_URL = import.meta.env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
@@ -76,7 +76,7 @@
     if (!userInput || !userInput.value.trim() || isLoading) return;
 
     const question = userInput.value.trim();
-    
+
     // 1. Add User Message
     addMessage(question, 'user');
     userInput.value = '';
@@ -93,7 +93,7 @@
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           question,
           last_messages: conversationHistory.slice(-4) // Send last 4 messages (2 Q&A pairs)
         }),
@@ -118,7 +118,7 @@
       // 5. Update conversation history for context
       conversationHistory.push({ role: 'user', content: question });
       conversationHistory.push({ role: 'assistant', content: data.answer });
-      
+
       // Keep only last 10 messages (5 pairs) to avoid memory issues
       if (conversationHistory.length > 10) {
         conversationHistory = conversationHistory.slice(-10);
@@ -145,10 +145,10 @@
 
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${type}`;
-    
+
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    
+
     if (type === 'user') {
       contentDiv.textContent = text;
     } else {
@@ -165,7 +165,7 @@
 
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message bot';
-    
+
     // Main Answer
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
@@ -176,14 +176,14 @@
     if (data.sources && data.sources.length > 0) {
       const sourcesDetails = document.createElement('details');
       sourcesDetails.className = 'sources-collapsible';
-      
+
       const sourcesSummary = document.createElement('summary');
       sourcesSummary.innerHTML = `📚 Ver fuentes (${data.sources.length})`;
       sourcesDetails.appendChild(sourcesSummary);
-      
+
       const sourcesContainer = document.createElement('div');
       sourcesContainer.className = 'sources-content';
-      
+
       data.sources.forEach((source: any) => {
         const sourceCard = document.createElement('div');
         sourceCard.className = 'source-card-mini';
@@ -196,7 +196,7 @@
         `;
         sourcesContainer.appendChild(sourceCard);
       });
-      
+
       sourcesDetails.appendChild(sourcesContainer);
       msgDiv.appendChild(sourcesDetails);
     }
@@ -221,7 +221,7 @@
 
   function addLoadingIndicator() {
     if (!messagesArea) return '';
-    
+
     const id = 'loading-' + Date.now();
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message bot loading';
@@ -303,13 +303,13 @@
     border-radius: 18px 18px 18px 4px; /* Bubble shape */
     box-shadow: var(--shadow-sm);
   }
-  
+
   .message.error .message-content {
     background: #fef3c7;
     color: #92400e;
     border: 1px solid #fbbf24;
   }
-  
+
   .message.error .message-content strong {
     color: #92400e;
   }
@@ -411,7 +411,7 @@
     border-radius: 8px;
     overflow: hidden;
   }
-  
+
   .sources-collapsible summary {
     cursor: pointer;
     user-select: none;
@@ -422,7 +422,7 @@
     align-items: center;
     gap: 6px;
   }
-  
+
   .sources-collapsible summary:hover {
     background: var(--border-color);
   }
@@ -446,7 +446,7 @@
   .source-card-mini:last-child {
     margin-bottom: 0;
   }
-  
+
   .source-card-mini:hover {
     background: var(--bg-primary);
     border-color: var(--accent-color);
@@ -495,7 +495,7 @@
     border-radius: 8px;
     overflow: hidden;
   }
-  
+
   .agent-trace-mini summary {
     cursor: pointer;
     user-select: none;
@@ -506,7 +506,7 @@
     align-items: center;
     gap: 6px;
   }
-  
+
   .agent-trace-mini summary:hover {
     background: var(--border-color);
   }
@@ -521,7 +521,7 @@
     padding-left: 20px;
     margin: 4px 0 0 0;
   }
-  
+
   .trace-details li {
     margin-bottom: 4px;
   }

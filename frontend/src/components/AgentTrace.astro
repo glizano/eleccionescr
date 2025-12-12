@@ -14,13 +14,13 @@ const { intent, steps, chunks_retrieved } = Astro.props;
     <span class="trace-title">Proceso de pensamiento</span>
     <span class="trace-badge">{intent}</span>
   </summary>
-  
+
   <div class="trace-content">
     <div class="trace-stat">
       <span class="label">Chunks recuperados:</span>
       <span class="value">{chunks_retrieved}</span>
     </div>
-    
+
     <div class="trace-steps">
       <span class="label">Pasos ejecutados:</span>
       <ul>

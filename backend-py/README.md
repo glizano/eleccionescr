@@ -38,11 +38,13 @@ User Question
 ### 1. Instalar dependencias
 
 **Para desarrollo local** (incluye sentence-transformers para embeddings gratis):
+
 ```bash
 uv sync --group dev
 ```
 
 **Solo producción** (excluye dependencias pesadas):
+
 ```bash
 uv sync
 ```
@@ -83,6 +85,7 @@ curl -X POST http://localhost:8000/api/ask \
 ```
 
 **Trace del agente:**
+
 ```json
 {
   "agent_trace": {
@@ -110,6 +113,7 @@ curl -X POST http://localhost:8000/api/ask \
 ```
 
 **Trace del agente:**
+
 ```json
 {
   "agent_trace": {
@@ -137,6 +141,7 @@ curl -X POST http://localhost:8000/api/ask \
 ```
 
 **Trace del agente:**
+
 ```json
 {
   "agent_trace": {
@@ -159,25 +164,32 @@ Visita `http://localhost:8000/docs` para la documentación Swagger UI.
 ## 🏗️ Arquitectura de Agentes
 
 ### Intent Classifier Agent
+
 Clasifica la pregunta en:
+
 - `specific_party`: Pregunta sobre un tema específico de un partido (ej: "¿Qué propone el PLN sobre educación?")
 - `party_general_plan`: Pregunta que solicita un resumen completo del plan de un partido (ej: "¿Qué plantea el plan del PLN?")
 - `general_comparison`: Pregunta general o comparativa entre partidos
 - `unclear`: No está claro
 
 ### Party Extractor Agent
+
 Extrae nombres de partidos mencionados usando LLM con few-shot examples.
 
 Partidos conocidos (20 partidos): ACRM, CAC, CDS, CR1, FA, PA, PDLCT, PEL, PEN, PIN, PJSC, PLN, PLP, PNG, PNR, PPSO, PSD, PUCD, PUSC, UP
 
 ### RAG Agent
+
 Ejecuta búsqueda vectorial con estrategias adaptativas:
+
 - **5 chunks filtrados** por partido si intent = specific_party (temas específicos)
 - **15 chunks filtrados** por partido si intent = party_general_plan (resumen completo)
 - **20 chunks balanceados** entre partidos si intent = general_comparison (hasta 2 por partido de los 20 partidos)
 
 ### Response Generator Agent
+
 Genera respuesta final con:
+
 - Citas de fuentes
 - Formato estructurado
 - Validación de información
@@ -297,6 +309,7 @@ MAX_REQUESTS_PER_DAY=50
 #### Monitoreo con Langfuse
 
 Todos los requests se registran en Langfuse (si está habilitado) con:
+
 - Session ID del usuario
 - Metadata de costos por request
 - Análisis de uso por IP/sesión

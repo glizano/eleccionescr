@@ -92,6 +92,7 @@ LANGFUSE_ENABLED=false
 ### 4. Ingesta de Datos
 
 La ingesta de datos se ejecuta mediante **GitHub Actions**, no como un servicio de Railway. Esto permite:
+
 - Ejecutar la ingesta de forma programada o bajo demanda
 - Evitar costos de mantener un servicio corriendo permanentemente
 - Mejor control y trazabilidad del proceso de ingesta
@@ -158,10 +159,12 @@ Si necesitas más capacidad:
 ## 💰 Costos Estimados
 
 Railway ofrece:
+
 - **Plan Hobby**: $5/mes de crédito gratuito (suficiente para desarrollo/pruebas)
 - **Plan Pro**: $20/mes + uso adicional (recomendado para producción)
 
 Costos adicionales:
+
 - **Google Gemini**: Según uso de API (gemini-2.5-flash tiene tier gratuito generoso)
 - **Qdrant Cloud**: Plan gratuito disponible (1GB), planes pagos desde $25/mes
 - **OpenAI** (opcional): Según uso de API

@@ -1,4 +1,5 @@
 # quick_query.py
+import os
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 

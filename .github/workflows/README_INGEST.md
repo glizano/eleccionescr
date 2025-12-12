@@ -28,17 +28,21 @@ graph TD
 ## 📋 Jobs Detallados
 
 ### 1️⃣ **Validate**
+
 - Instala dependencias con `uv`
 - Verifica que todos los imports funcionan
 - Rápido (~30 segundos)
 
-### 2️⃣ **Ingest** 
+### 2️⃣ **Ingest**
+
 **Parámetros:**
+
 - `embedding_provider`: `sentence_transformers` o `openai` (default: `openai`)
 - `embedding_model`: nombre del modelo (default: `text-embedding-3-large`)
 - `recreate_collection`: Si `true`, elimina y recrea la colección desde cero (default: `false`)
 
 **Flujo:**
+
 - **Extracción Robusta de PDFs:**
   - Intenta `pdfplumber` (mejor encoding)
   - Fallback a `pypdf` estándar
@@ -61,6 +65,7 @@ graph TD
   - Index por `partido` y `doc_id`
 
 ### 3️⃣ **Verify Quality** 🆕
+
 - **Análisis Exhaustivo:**
   - Revisa TODOS los chunks en Qdrant
   - Calcula métricas por partido
@@ -72,6 +77,7 @@ graph TD
   - 🔴 **Critical**: > 50% corrupción (falla el workflow)
 
 - **Reporte Detallado:**
+
   ```
   ================================================================================
   PARTIDO    CHUNKS   CORRUPTED    AVG CORRUPT %   STATUS    
@@ -102,6 +108,7 @@ graph TD
 ### 📋 Ejemplos Prácticos
 
 #### Ejemplo 1: Ingesta Completa (Recomendado)
+
 ```
 qdrant_url: https://your-qdrant.cloud
 embedding_provider: openai
@@ -111,6 +118,7 @@ verify_mode: quick              ← Rápido
 ```
 
 **Resultado:**
+
 ```
 📝 Incremental mode: Will update only changed files
 📌 SAMPLING MODE: Checking 10 chunks per party
@@ -119,6 +127,7 @@ verify_mode: quick              ← Rápido
 ```
 
 #### Ejemplo 2: Recreate + Verificación Completa (Auditoría)
+
 ```
 qdrant_url: https://your-qdrant.cloud
 recreate_collection: true       ← ⚠️ BORRA TODO
@@ -126,6 +135,7 @@ verify_mode: full               ← Verificación completa
 ```
 
 **Resultado:**
+
 ```
 🔄 RECREATE MODE: Deleting existing collection...
 ✅ Deleted collection
@@ -137,6 +147,7 @@ VERIFY_FULL_SCAN=true (TODOS los chunks)
 ```
 
 #### Ejemplo 3: Ingesta + Verificación Personalizada
+
 ```
 qdrant_url: https://your-qdrant.cloud
 verify_mode: custom
@@ -144,30 +155,36 @@ verify_sample_size: 20          ← 20 chunks por partido
 ```
 
 **Resultado:**
+
 ```
 📌 SAMPLING MODE: Checking 20 chunks per party
 Analyzed 400 chunks from 20 parties
    (20 samples per party, ~400 total)
 ✅ QUALITY CHECK PASSED
 ```
+
 📝 Incremental mode: Will update only changed files
 📦 Using existing collection 'planes_gobierno'
 [PLN.pdf] → SKIP (no changes)
 [PPSO.pdf] → Updated (file changed)
 ✅ Ingestion completed successfully!
+
 ```
 
 ### Ejemplo: Modo Recreate (reset completo)
 ```
-qdrant_url: https://your-qdrant.cloud
+
+qdrant_url: <https://your-qdrant.cloud>
 collection_name: planes_gobierno
 embedding_provider: openai
 embedding_model: text-embedding-3-large
 recreate_collection: true  ← ⚠️ BORRARÁ TODO Y EMPEZARÁ NUEVO
+
 ```
 
 **Resultado:**
 ```
+
 🔄 RECREATE MODE ENABLED: Will delete and recreate collection from scratch
 ✅ Deleted collection 'planes_gobierno'
 📦 Creating collection 'planes_gobierno'...
@@ -175,6 +192,7 @@ recreate_collection: true  ← ⚠️ BORRARÁ TODO Y EMPEZARÁ NUEVO
 [CA.pdf] → Created 15 chunks
 ...
 ✅ Ingestion completed successfully!
+
 ```
 
 ### Opción 2: GitHub CLI
@@ -223,26 +241,32 @@ Este job ahora usa **sampling inteligente** con 3 modos configurables:
 
 ### Modo Quick (Default - Recomendado) ⚡
 ```
+
 Chunks: 10 por partido (~200 total)
 Tiempo: 2-5 segundos
 Carga Qdrant: Mínima
 Uso: Verificación post-ingesta
+
 ```
 
 ### Modo Custom 🎯
 ```
+
 Chunks: N por partido (configurable: 5-50)
 Tiempo: 1-30 segundos (depende de N)
 Carga Qdrant: Baja
 Uso: Balancear precisión vs velocidad
+
 ```
 
 ### Modo Full Scan 🔍
 ```
+
 Chunks: TODOS los chunks
 Tiempo: 5+ minutos (10,000+ chunks)
 Carga Qdrant: Alta
 Uso: Auditoría completa (una vez al trimestre)
+
 ```
 
 **Flujo:**
@@ -276,7 +300,9 @@ verify_sample_size:
   description: 'Para custom mode: 5-50'
   default: '10'
 ```
+
 VERIFY_FULL_SCAN: true
+
 ```
 
 ## 🔐 Secretos Requeridos
@@ -297,7 +323,9 @@ En **Settings** → **Secrets and variables** → **Actions**, configura:
 
 **Síntoma:**
 ```
+
 🔴 CRITICAL ISSUES DETECTED in: PPSO, FA
+
 ```
 
 **Causa:** PDFs con encoding corrupto o fuentes embebidas problemáticas
@@ -325,6 +353,7 @@ En **Settings** → **Secrets and variables** → **Actions**, configura:
 **Causa:** Secreto no configurado
 
 **Solución:**
+
 1. Settings → Secrets → New repository secret
 2. Name: `OPENAI_API_KEY`
 3. Value: Tu API key de OpenAI
@@ -334,6 +363,7 @@ En **Settings** → **Secrets and variables** → **Actions**, configura:
 **Causa:** URL incorrecta o Qdrant no accesible desde GitHub
 
 **Solución:**
+
 - Para Qdrant Cloud: Usa la URL HTTPS completa
 - Para local: No puedes usar `localhost` desde GitHub Actions
   - Usa Railway, Render, o cualquier host público

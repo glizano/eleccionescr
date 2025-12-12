@@ -1,0 +1,116 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.txt)$
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--unsafe']  # Allow custom YAML tags
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python - Ruff (linting and formatting)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^backend-py/.*\.py$|^ingest/.*\.py$
+      - id: ruff-format
+        files: ^backend-py/.*\.py$|^ingest/.*\.py$
+
+  # JavaScript/TypeScript - Prettier (formatting) - DISABLED (run in frontend directory)
+  # - repo: https://github.com/pre-commit/mirrors-prettier
+  #   rev: v4.0.0-alpha.8
+  #   hooks:
+  #     - id: prettier
+  #       files: ^frontend/.*\.(js|ts|astro|json|css|md)$
+  #       additional_dependencies:
+  #         - prettier@3.4.2
+  #         - prettier-plugin-astro@0.14.1
+
+  # JavaScript/TypeScript - ESLint (linting) - DISABLED (run in frontend directory)
+  # - repo: https://github.com/pre-commit/mirrors-eslint
+  #   rev: v9.17.0
+  #   hooks:
+  #     - id: eslint
+  #       files: ^frontend/.*\.(js|ts|astro)$
+  #       types: [file]
+  #       additional_dependencies:
+  #         - eslint@9.17.0
+  #         - eslint-plugin-astro@1.3.1
+  #         - "@typescript-eslint/parser@8.17.0"
+
+  # Python - Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: ['--skip', 'B110']
+        files: ^(backend-py|ingest)/.*\.py$
+        additional_dependencies: ['bandit[toml]']
+        exclude: ^.*/tests/.*\.py$
+
+  # Python - Type checking (optional, can be slow)
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.11.2
+  #   hooks:
+  #     - id: mypy
+  #       files: ^backend-py/.*\.py$
+  #       additional_dependencies: [types-all]
+  #       args: [--ignore-missing-imports, --strict]
+
+  # Secrets scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # Markdown linting - DISABLED (too strict for this project)
+  # - repo: https://github.com/igorshubovych/markdownlint-cli
+  #   rev: v0.42.0
+  #   hooks:
+  #     - id: markdownlint
+  #       args: ['--fix']
+  #       exclude: ^(CHANGELOG\.md|.*node_modules.*)$
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: ['-d', '{extends: default, rules: {line-length: {max: 120}, document-start: disable}}']
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: ['--ignore', 'DL3008', '--ignore', 'DL3009']
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+# Global settings
+default_language_version:
+  python: python3.13
+  node: 20.11.0

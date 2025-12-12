@@ -6,7 +6,8 @@ Scripts para procesar los PDFs de planes de gobierno y poblar la colección de Q
 
 **Problema resuelto**: Caracteres corruptos en PDFs (especialmente PPSO) causaban respuestas incorrectas.
 
-**Solución**: 
+**Solución**:
+
 - ✅ Múltiples estrategias de extracción (pdfplumber + pypdf)
 - ✅ Detección automática de texto corrupto
 - ✅ Limpieza y normalización de encoding
@@ -45,18 +46,22 @@ python verify_quality.py
 ## 🔄 Modos de Operación
 
 ### Incremental (Default)
+
 ```bash
 python main.py
 ```
+
 - Usa hash SHA256 para detectar cambios
 - Solo procesa archivos nuevos o modificados
 - Más rápido y eficiente
 - Perfecto para updates regulares
 
 ### Recreate (Reset Completo)
+
 ```bash
 RECREATE_COLLECTION=true python main.py
 ```
+
 - **ADVERTENCIA**: Elimina la colección existente
 - Crea una colección nueva desde cero
 - Procesa TODOS los PDFs
@@ -78,6 +83,7 @@ VERIFY_SAMPLE_SIZE=20 python verify_quality.py
 ```
 
 **Esto te mostrará:**
+
 - Chunks analizados vs total estimado
 - Corrupción detectada por partido
 - Alertas si hay problemas críticos

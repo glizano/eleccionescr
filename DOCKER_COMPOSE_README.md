@@ -43,11 +43,11 @@ docker-compose up --build qdrant backend frontend ingest
 
 ### 3. Acceder a los servicios
 
-- **Frontend**: http://localhost:80 (o http://localhost)
-- **Backend API**: http://localhost:8000
-- **Backend API Docs**: http://localhost:8000/docs
-- **Qdrant Admin**: http://localhost:6333
-- **Langfuse UI**: http://localhost:3000 (para observabilidad de LLM)
+- **Frontend**: <http://localhost:80> (o <http://localhost>)
+- **Backend API**: <http://localhost:8000>
+- **Backend API Docs**: <http://localhost:8000/docs>
+- **Qdrant Admin**: <http://localhost:6333>
+- **Langfuse UI**: <http://localhost:3000> (para observabilidad de LLM)
 
 ### 4. Ver logs
 
@@ -102,17 +102,20 @@ Langfuse es una plataforma de observabilidad para rastrear y analizar llamadas a
 
 ### Configuración inicial
 
-1. Acceder a la UI de Langfuse: http://localhost:3000
+1. Acceder a la UI de Langfuse: <http://localhost:3000>
 2. Crear una cuenta y un proyecto
 3. Obtener las llaves API (Public Key y Secret Key)
 4. Configurar en `.env`:
+
    ```bash
    LANGFUSE_PUBLIC_KEY=pk-lf-...
    LANGFUSE_SECRET_KEY=sk-lf-...
    LANGFUSE_HOST=http://langfuse:3000
    LANGFUSE_ENABLED=true
    ```
+
 5. Reiniciar el backend:
+
    ```bash
    docker-compose restart backend
    ```
@@ -127,12 +130,14 @@ Langfuse es una plataforma de observabilidad para rastrear y analizar llamadas a
 ### Desactivar Langfuse
 
 Si no necesitas observabilidad, puedes:
+
 - Dejar `LANGFUSE_ENABLED=false` en `.env` (el backend funcionará normalmente)
 - O comentar los servicios `langfuse` y `langfuse-db` en `docker-compose.yml`
 
 ### Notas de Seguridad
 
 Para producción, debes cambiar los secretos por defecto:
+
 ```bash
 # Generar secretos aleatorios
 LANGFUSE_NEXTAUTH_SECRET=$(openssl rand -base64 32)
@@ -144,6 +149,7 @@ Agregar estas variables a tu `.env` de producción.
 ## Troubleshooting
 
 ### Puerto ya en uso
+
 ```bash
 # Liberar puertos específicos
 lsof -i :8000   # Backend
@@ -155,12 +161,15 @@ lsof -i :3000   # Langfuse
 ```
 
 ### Qdrant no está listo
+
 El backend espera a que Qdrant esté healthy antes de iniciar. Ver logs:
+
 ```bash
 docker-compose logs qdrant
 ```
 
 ### Reiniciar servicio específico
+
 ```bash
 docker-compose restart backend
 docker-compose restart frontend
