@@ -89,7 +89,9 @@ def rag_search_node(state: AgentState) -> AgentState:
         # Query Qdrant for each party independently
         for abbr in party_abbrs:
             try:
-                results = search_qdrant(query_vector=query_vector, partido_filter=abbr, limit=per_party_limit)
+                results = search_qdrant(
+                    query_vector=query_vector, partido_filter=abbr, limit=per_party_limit
+                )
                 if results:
                     # sort just in case backend doesn't guarantee order
                     results = sorted(results, key=lambda r: r.score, reverse=True)
