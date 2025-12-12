@@ -4,6 +4,7 @@ from typing import Any, TypedDict
 from langgraph.graph import END, StateGraph
 
 from app.agents.classifier import classify_intent, extract_parties
+from app.party_metadata import CANDIDATE_TO_PARTY, PARTIES_METADATA, PARTY_NAME_TO_ABBR
 from app.services.embeddings import generate_embedding
 from app.services.langfuse_service import langfuse_trace
 from app.services.llm import generate_text
@@ -207,11 +208,72 @@ Pregunta: {state["question"]}"""
         }
 
 
+def metadata_query_node(state: AgentState) -> AgentState:
+    """Node: Answer metadata questions directly without RAG"""
+    logger.info("[Agent] Answering metadata query...")
+    
+    question = state["question"].lower()
+    
+    # Build comprehensive answer from metadata
+    answer_parts = []
+    
+    # Check if asking about a specific candidate
+    for candidate, party_abbr in CANDIDATE_TO_PARTY.items():
+        if any(part.lower() in question for part in candidate.split() if len(part) > 4):
+            party_data = next((p for p in PARTIES_METADATA if p["abbreviation"] == party_abbr), None)
+            if party_data:
+                answer_parts.append(f"{candidate} es el candidato presidencial del partido {party_data['name']} ({party_abbr}).")
+    
+    # Check if asking about a specific party abbreviation
+    for party in PARTIES_METADATA:
+        abbr = party["abbreviation"]
+        if abbr.lower() in question:
+            if "candidato" in question:
+                answer_parts.append(f"El candidato presidencial del {party['name']} ({abbr}) es {party['candidate']}.")
+            elif "nombre" in question or "significa" in question:
+                answer_parts.append(f"{abbr} significa {party['name']}.")
+            elif "partido" in question and not answer_parts:  # General info
+                answer_parts.append(f"El {party['name']} ({abbr}) tiene como candidato presidencial a {party['candidate']}.")
+    
+    # Check if asking about party by full name
+    for party_name, party_abbr in PARTY_NAME_TO_ABBR.items():
+        if party_name.lower() in question:
+            party_data = next((p for p in PARTIES_METADATA if p["abbreviation"] == party_abbr), None)
+            if party_data and not answer_parts:
+                if "candidato" in question:
+                    answer_parts.append(f"El candidato presidencial del {party_name} es {party_data['candidate']}.")
+                elif "sigla" in question:
+                    answer_parts.append(f"La sigla del {party_name} es {party_abbr}.")
+    
+    # Fallback: provide general info about all parties
+    if not answer_parts:
+        if "candidatos" in question or "partidos" in question:
+            answer_parts.append("Los 20 partidos inscritos para las elecciones de Costa Rica 2026 son:\n\n")
+            for party in PARTIES_METADATA:
+                answer_parts.append(f"- **{party['abbreviation']}** ({party['name']}): {party['candidate']}")
+        else:
+            answer_parts.append("No pude identificar exactamente qué información necesitas. ¿Podrías ser más específico?")
+    
+    answer = "\n".join(answer_parts)
+    
+    logger.info(f"[Agent] Metadata answer generated: {answer[:100]}...")
+    
+    return {
+        **state,
+        "answer": answer,
+        "sources": [],  # No sources for metadata queries
+        "contexts": [],
+        "steps": state.get("steps", []) + ["Answered from metadata"],
+    }
+
+
 def route_by_intent(state: AgentState) -> str:
     """Conditional edge: Route based on intent"""
     intent = state.get("intent", "unclear")
 
-    if intent in ["specific_party", "party_general_plan"]:
+    if intent == "metadata_query":
+        return "metadata_query"
+    elif intent in ["specific_party", "party_general_plan"]:
         return "extract_parties"
     else:
         # For general_comparison or unclear, go directly to RAG
@@ -227,6 +289,7 @@ def build_agent_graph():
     # Add nodes
     workflow.add_node("classify_intent", classify_intent_node)
     workflow.add_node("extract_parties", extract_parties_node)
+    workflow.add_node("metadata_query", metadata_query_node)
     workflow.add_node("rag_search", rag_search_node)
     workflow.add_node("generate_response", generate_response_node)
 
@@ -237,13 +300,18 @@ def build_agent_graph():
     workflow.add_conditional_edges(
         "classify_intent",
         route_by_intent,
-        {"extract_parties": "extract_parties", "rag_search": "rag_search"},
+        {
+            "metadata_query": "metadata_query",
+            "extract_parties": "extract_parties",
+            "rag_search": "rag_search",
+        },
     )
 
     # Add regular edges
     workflow.add_edge("extract_parties", "rag_search")
     workflow.add_edge("rag_search", "generate_response")
     workflow.add_edge("generate_response", END)
+    workflow.add_edge("metadata_query", END)  # Metadata queries end directly
 
     # Compile
     return workflow.compile()

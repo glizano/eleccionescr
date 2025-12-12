@@ -39,13 +39,13 @@ class IntentClassifierState(TypedDict):
     """State for intent classification"""
 
     question: str
-    intent: Literal["specific_party", "party_general_plan", "general_comparison", "unclear"]
+    intent: Literal["specific_party", "party_general_plan", "general_comparison", "metadata_query", "unclear"]
 
 
 class IntentClassification(BaseModel):
     """Structured output for intent classification"""
 
-    intent: Literal["specific_party", "party_general_plan", "general_comparison", "unclear"] = (
+    intent: Literal["specific_party", "party_general_plan", "general_comparison", "metadata_query", "unclear"] = (
         Field(description="The classified intent of the question")
     )
 
@@ -66,7 +66,7 @@ def classify_intent(question: str, conversation_history: str | None = None) -> s
         question: The current question
         conversation_history: Optional conversation context for follow-up questions
 
-    Returns: "specific_party", "party_general_plan", "general_comparison", or "unclear"
+    Returns: "specific_party", "party_general_plan", "general_comparison", "metadata_query", or "unclear"
     """
     context_note = ""
     if conversation_history:
@@ -78,6 +78,7 @@ Clasifica la pregunta en una de estas categorías:
 - "specific_party": La pregunta es sobre UN TEMA O ASPECTO ESPECÍFICO de un partido (ej: educación, salud, seguridad)
 - "party_general_plan": La pregunta pide un RESUMEN COMPLETO o GENERAL del plan de un partido específico
 - "general_comparison": La pregunta es general o compara múltiples partidos
+- "metadata_query": La pregunta pide INFORMACIÓN BÁSICA sobre un partido o candidato (nombre, candidato, siglas) - NO requiere buscar en el plan
 - "unclear": No está claro
 
 Ejemplos:
@@ -92,6 +93,10 @@ Ejemplos:
 - "¿Qué proponen los partidos sobre seguridad?" → general_comparison (múltiples partidos)
 - "Compara las propuestas de PLN y PUSC" → general_comparison (comparación)
 - "¿Cuál es la mejor propuesta educativa?" → general_comparison (comparación implícita)
+- "¿Quién es el candidato del PLN?" → metadata_query (pregunta sobre info básica)
+- "¿Cuál es el partido de Natalia Díaz?" → metadata_query (pregunta sobre info básica)
+- "¿Qué significa FA?" → metadata_query (pregunta sobre info básica)
+- "¿Cuál es el nombre completo del PUSC?" → metadata_query (pregunta sobre info básica)
 
 IMPORTANTE: Si hay contexto de conversación previa y la pregunta es de seguimiento (ej: "Y el PIN?", "¿Y qué dice el PUSC?"):
 - Si el contexto menciona un tema específico → specific_party
