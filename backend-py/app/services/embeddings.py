@@ -4,6 +4,7 @@ Embeddings service using LangChain providers.
 Provides a flexible interface to switch between different embedding providers.
 """
 
+import hashlib
 import logging
 from functools import lru_cache
 
@@ -60,8 +61,24 @@ def get_embedding_provider() -> Embeddings:
         return embeddings
 
 
+@lru_cache(
+    maxsize=None if not settings.embedding_cache_enabled else settings.embedding_cache_max_size
+)
+def _cached_embed_query(text_hash: str, text: str) -> tuple[float, ...]:
+    """
+    Internal cached embedding function.
+
+    Uses text_hash as cache key to allow LRU cache to work properly.
+    Returns tuple instead of list for hashability.
+    """
+    provider = get_embedding_provider()
+    embedding = provider.embed_query(text)
+    logger.debug(f"Generated embedding for text (hash: {text_hash[:8]}...)")
+    return tuple(embedding)
+
+
 def generate_embedding(text: str) -> list[float]:
-    """Generate embedding for a single text.
+    """Generate embedding for a single text with caching.
 
     Args:
         text: The text to embed.
@@ -69,8 +86,16 @@ def generate_embedding(text: str) -> list[float]:
     Returns:
         The embedding vector as a list of floats.
     """
-    provider = get_embedding_provider()
-    return provider.embed_query(text)
+    if not settings.embedding_cache_enabled:
+        provider = get_embedding_provider()
+        return provider.embed_query(text)
+
+    # Create hash of text for cache key
+    text_hash = hashlib.sha256(text.encode()).hexdigest()
+
+    # Get cached or generate new
+    embedding_tuple = _cached_embed_query(text_hash, text)
+    return list(embedding_tuple)
 
 
 def generate_embeddings(texts: list[str]) -> list[list[float]]:

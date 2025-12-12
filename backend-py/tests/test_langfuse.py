@@ -87,16 +87,12 @@ def test_llm_generate_text_with_none_trace():
     """Test that generate_text works with langfuse_trace=None."""
     from unittest.mock import MagicMock
 
-    with patch("app.services.llm.get_client") as mock_get_client:
-        mock_client = MagicMock()
+    with patch("app.services.llm.get_llm") as mock_get_llm:
+        mock_llm = MagicMock()
         mock_response = MagicMock()
-        mock_candidate = MagicMock()
-        mock_part = MagicMock()
-        mock_part.text = "Test response"
-        mock_candidate.content.parts = [mock_part]
-        mock_response.candidates = [mock_candidate]
-        mock_client.models.generate_content.return_value = mock_response
-        mock_get_client.return_value = mock_client
+        mock_response.content = "Test response"
+        mock_llm.invoke.return_value = mock_response
+        mock_get_llm.return_value = mock_llm
 
         from app.services.llm import generate_text
 

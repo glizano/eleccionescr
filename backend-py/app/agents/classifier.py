@@ -3,10 +3,15 @@ from typing import Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
+from app.agents.prompts import (
+    build_intent_classification_prompt,
+    build_party_extraction_prompt,
+)
 from app.party_metadata import (
     PARTIES_METADATA,
 )
-from app.services.llm import get_llm, is_resource_exhausted_error
+from app.services.llm import get_llm
+from app.services.retry import is_resource_exhausted_error
 
 logger = logging.getLogger(__name__)
 
@@ -79,41 +84,7 @@ def classify_intent(question: str, conversation_history: str | None = None) -> s
 
     Returns: "specific_party", "party_general_plan", "general_comparison", "metadata_query", or "unclear"
     """
-    context_note = ""
-    if conversation_history:
-        context_note = f"\n\nCONTEXTO DE LA CONVERSACIÓN PREVIA:\n{conversation_history}\n"
-
-    prompt = f"""Eres un clasificador de intenciones para preguntas sobre planes de gobierno.{context_note}
-
-Clasifica la pregunta en una de estas categorías:
-- "specific_party": La pregunta es sobre UN TEMA O ASPECTO ESPECÍFICO de un partido (ej: educación, salud, seguridad)
-- "party_general_plan": La pregunta pide un RESUMEN COMPLETO o GENERAL del plan de un partido específico
-- "general_comparison": La pregunta es general o compara múltiples partidos
-- "metadata_query": La pregunta pide INFORMACIÓN BÁSICA sobre un partido o candidato (nombre, candidato, siglas) - NO requiere buscar en el plan
-- "unclear": No está claro
-
-Ejemplos:
-- "¿Qué propone el PLN sobre educación?" → specific_party (tema específico: educación)
-- "¿Qué dice el PUSC sobre salud?" → specific_party (tema específico: salud)
-- "¿Cuál es la propuesta del FA para seguridad?" → specific_party (tema específico: seguridad)
-- "¿Qué plantea el PEN sobre empleo?" → specific_party (tema específico: empleo)
-- "¿Qué plantea el plan del PLN?" → party_general_plan (pregunta general sobre todo el plan)
-- "¿Cuál es el plan del PUSC?" → party_general_plan (pregunta general sobre todo el plan)
-- "Resume el plan de gobierno del PNR" → party_general_plan (resumen completo)
-- "Cuéntame sobre el plan del PJSC" → party_general_plan (resumen completo)
-- "¿Qué proponen los partidos sobre seguridad?" → general_comparison (múltiples partidos)
-- "Compara las propuestas de PLN y PUSC" → general_comparison (comparación)
-- "¿Cuál es la mejor propuesta educativa?" → general_comparison (comparación implícita)
-- "¿Quién es el candidato del PLN?" → metadata_query (pregunta sobre info básica)
-- "¿Cuál es el partido de Natalia Díaz?" → metadata_query (pregunta sobre info básica)
-- "¿Qué significa FA?" → metadata_query (pregunta sobre info básica)
-- "¿Cuál es el nombre completo del PUSC?" → metadata_query (pregunta sobre info básica)
-
-IMPORTANTE: Si hay contexto de conversación previa y la pregunta es de seguimiento (ej: "Y el PIN?", "¿Y qué dice el PUSC?"):
-- Si el contexto menciona un tema específico → specific_party
-- Si el contexto no menciona tema específico → party_general_plan
-
-Pregunta actual: {question}"""
+    prompt = build_intent_classification_prompt(question, conversation_history)
 
     try:
         llm = get_llm()
@@ -151,32 +122,7 @@ def extract_parties(question: str) -> list[str]:
         ]
     )
 
-    prompt = f"""Extrae los partidos políticos mencionados en la pregunta.
-
-PARTIDOS DE COSTA RICA 2026:
-{parties_info}
-
-REGLAS:
-- Devuelve las siglas de los partidos mencionados como lista
-- Si no se menciona ningún partido, devuelve lista vacía []
-- Identifica partidos mencionados por:
-  • Siglas (PLN, PUSC, FA, etc.)
-  • Nombre completo ("Liberación Nacional", "Frente Amplio")
-  • Nombre del candidato ("Fabricio Alvarado", "Claudia Dobles")
-  • Apellido del candidato ("Alvarado", "Feinzaig")
-- Usa SIEMPRE las siglas exactas de la lista
-- Solo incluye partidos que estén en la lista de arriba
-
-EJEMPLOS:
-- "¿Qué propone el PLN?" → ["PLN"]
-- "¿Fabricio Alvarado qué dice?" → ["PNR"]
-- "Compara Liberación Nacional con el PUSC" → ["PLN", "PUSC"]
-- "¿Claudia Dobles tiene propuestas?" → ["CAC"]
-- "¿Qué dice Feinzaig sobre economía?" → ["PLP"]
-- "Compara todos los partidos" → []
-- "¿Propuestas sobre educación?" → []
-
-PREGUNTA: {question}"""
+    prompt = build_party_extraction_prompt(question, parties_info)
 
     try:
         llm = get_llm()

@@ -47,13 +47,6 @@ print_status "Format check"
 echo ""
 echo -e "${YELLOW}🧪 Running tests...${NC}"
 
-# Check if Qdrant is running
-if ! curl -s http://localhost:6333/health > /dev/null 2>&1; then
-    echo -e "${RED}⚠️  Qdrant is not running!${NC}"
-    echo "Start it with: docker run -p 6333:6333 qdrant/qdrant"
-    exit 1
-fi
-
 uv run pytest tests/ -v
 print_status "Tests"
 

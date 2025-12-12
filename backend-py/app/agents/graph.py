@@ -4,11 +4,16 @@ from typing import Any, TypedDict
 from langgraph.graph import END, StateGraph
 
 from app.agents.classifier import classify_intent, extract_parties
+from app.agents.prompts import build_rag_response_prompt
+from app.agents.retrieval import (
+    search_default,
+    search_general_comparison,
+    search_general_party_plan,
+    search_specific_party,
+)
 from app.party_metadata import CANDIDATE_TO_PARTY, PARTIES_METADATA, PARTY_NAME_TO_ABBR
-from app.services.embeddings import generate_embedding
 from app.services.langfuse_service import langfuse_trace
 from app.services.llm import generate_text
-from app.services.qdrant import search_qdrant
 
 logger = logging.getLogger(__name__)
 
@@ -63,86 +68,19 @@ def rag_search_node(state: AgentState) -> AgentState:
     """Node: Execute RAG search with appropriate filters"""
     logger.info("[Agent] Executing RAG search...")
 
-    # Generate embedding
-    query_vector = generate_embedding(state["question"])
+    question = state["question"]
+    intent = state["intent"]
+    parties = state.get("parties", [])
 
     # Determine search strategy based on intent
-    if state["intent"] == "specific_party" and state.get("parties"):
-        # Strategy 1: Specific party topic - get focused chunks from that party
-        partido_filter = state["parties"][0]
-        logger.info(f"[Agent] Specific topic for party: {partido_filter}")
-
-        contexts = search_qdrant(query_vector=query_vector, partido_filter=partido_filter, limit=5)
-
-    elif state["intent"] == "party_general_plan" and state.get("parties"):
-        # Strategy 2: General party plan - get comprehensive chunks from that party
-        partido_filter = state["parties"][0]
-        logger.info(f"[Agent] General plan overview for party: {partido_filter}")
-
-        # Get more chunks for comprehensive overview
-        contexts = search_qdrant(query_vector=query_vector, partido_filter=partido_filter, limit=15)
-
-    elif state["intent"] == "general_comparison":
-        # Strategy 3: General question - fetch per-party directly to guarantee coverage
-        logger.info("[Agent] General comparison - per-party targeted search (2 chunks each)")
-
-        # Build list of known party abbreviations from metadata
-        try:
-            party_abbrs = [p["abbreviation"] for p in PARTIES_METADATA]
-        except Exception:
-            party_abbrs = []
-
-        per_party_limit = 2
-        # Total budget: prefer fairness (1 each) before second round
-        max_contexts = 40
-
-        per_party_results: dict[str, list] = {}
-        missing: list[str] = []
-
-        # Query Qdrant for each party independently
-        for abbr in party_abbrs:
-            try:
-                results = search_qdrant(
-                    query_vector=query_vector, partido_filter=abbr, limit=per_party_limit
-                )
-                if results:
-                    # sort just in case backend doesn't guarantee order
-                    results = sorted(results, key=lambda r: r.score, reverse=True)
-                    per_party_results[abbr] = results[:per_party_limit]
-                else:
-                    missing.append(abbr)
-            except Exception:
-                missing.append(abbr)
-
-        # Assemble contexts fairly: first pass 1 per party, then second pass 1 more per party
-        contexts: list = []
-        # Round 1: ensure at least one per party (when available)
-        for abbr in party_abbrs:
-            party_chunks = per_party_results.get(abbr, [])
-            if party_chunks:
-                contexts.append(party_chunks[0])
-            if len(contexts) >= max_contexts:
-                break
-
-        # Round 2: add the second chunk per party (if budget allows)
-        if len(contexts) < max_contexts:
-            for abbr in party_abbrs:
-                party_chunks = per_party_results.get(abbr, [])
-                if len(party_chunks) > 1:
-                    contexts.append(party_chunks[1])
-                if len(contexts) >= max_contexts:
-                    break
-
-        # Log coverage summary
-        covered = sorted({c.payload.get("partido", "Unknown") for c in contexts})
-        logger.info(
-            f"[Agent] General comparison coverage: {len(covered)} parties -> {covered} (contexts: {len(contexts)}); missing-without-results: {missing}"
-        )
-
+    if intent == "specific_party" and parties:
+        contexts = search_specific_party(question, parties[0])
+    elif intent == "party_general_plan" and parties:
+        contexts = search_general_party_plan(question, parties[0])
+    elif intent == "general_comparison":
+        contexts = search_general_comparison(question)
     else:
-        # Strategy 4: Unclear - default search
-        logger.info("[Agent] Unclear intent - default search")
-        contexts = search_qdrant(query_vector=query_vector, partido_filter=None, limit=5)
+        contexts = search_default(question)
 
     return {
         **state,
@@ -155,54 +93,10 @@ def generate_response_node(state: AgentState) -> AgentState:
     """Node: Generate final response with citations"""
     logger.info("[Agent] Generating response...")
 
-    # Build context section (truncate to avoid token limits)
-    context_section = "---CONTEXT START---\n"
-    for idx, ctx in enumerate(state["contexts"]):
-        partido = ctx.payload.get("partido", "Unknown")
-        text = ctx.payload.get("text", "")
-        # Truncate each chunk to max 500 chars to reduce tokens
-        truncated_text = text[:500] + "..." if len(text) > 500 else text
-        context_section += f"[Fuente {idx + 1}] Partido: {partido}\n{truncated_text}\n\n"
-    context_section += "---CONTEXT END---"
-
-    # Adjust instructions based on intent
-    if state["intent"] == "general_comparison":
-        specific_instructions = """
-IMPORTANTE: Esta es una pregunta GENERAL o COMPARATIVA.
-- Debes mencionar las propuestas de TODOS los partidos que aparecen en el contexto
-- Organiza la respuesta por partido: "Según [Partido], ..."
-- Si un partido no tiene información sobre el tema, no lo menciones
-- Compara o contrasta las propuestas cuando sea relevante"""
-    elif state["intent"] == "party_general_plan":
-        specific_instructions = """
-IMPORTANTE: Esta es una pregunta que solicita un RESUMEN GENERAL o COMPLETO del plan de un partido.
-- Proporciona una visión INTEGRAL y COMPRENSIVA del plan basándote en todos los chunks disponibles
-- Organiza la información por temas/áreas principales (educación, salud, economía, seguridad, etc.)
-- Menciona los puntos clave y propuestas principales de cada área
-- Usa un formato estructurado y fácil de leer
-- Cita siempre: "Según [Partido], ..." """
-    else:
-        specific_instructions = """
-IMPORTANTE: Esta es una pregunta sobre un partido ESPECÍFICO.
-- Enfócate en las propuestas del partido mencionado
-- Cita siempre: "Según [Partido], ..." """
-
-    # Build complete prompt
-    prompt = f"""Eres un asistente especializado en planes de gobierno de Costa Rica 2026.
-
-REGLAS ESTRICTAS:
-1. Responde ÚNICAMENTE basándote en la información del contexto proporcionado
-2. Cita SIEMPRE el partido político fuente
-3. Si no hay información suficiente, responde: "No tengo información suficiente para responder esa pregunta"
-4. Sé preciso, objetivo y neutral
-5. No inventes datos ni hagas suposiciones
-6. Usa un tono informativo y profesional
-
-{specific_instructions}
-
-{context_section}
-
-Pregunta: {state["question"]}"""
+    # Build prompt using centralized builder
+    prompt = build_rag_response_prompt(
+        question=state["question"], contexts=state["contexts"], intent=state["intent"]
+    )
 
     try:
         logger.info(f"[Agent] Invoking LLM with {len(state['contexts'])} contexts...")

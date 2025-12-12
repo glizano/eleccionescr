@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     # Embeddings (use openai for production to reduce Docker image size)
     embedding_provider: Literal["sentence_transformers", "openai"] = "openai"
     embedding_model: str = "text-embedding-3-small"
+    embedding_cache_enabled: bool = True
+    embedding_cache_max_size: int = 1000
 
     # Server
     host: str = "0.0.0.0"
@@ -47,8 +49,29 @@ class Settings(BaseSettings):
     max_requests_per_hour: int = 30
     max_requests_per_day: int = 100
 
+    # RAG Search Limits
+    rag_specific_party_limit: int = 5
+    rag_general_plan_limit: int = 15
+    rag_comparison_per_party: int = 2
+    rag_comparison_max_total: int = 40
+    rag_default_limit: int = 5
+    rag_context_truncate_length: int = 500
+
+    # LLM Retry & Timeout
+    llm_timeout_seconds: int = 30
+    llm_retry_max_attempts: int = 3
+    llm_retry_initial_delay: float = 1.0
+    llm_retry_max_delay: float = 60.0
+    llm_retry_exponential_base: float = 2.0
+
+    # Circuit Breaker
+    circuit_breaker_enabled: bool = True
+    circuit_breaker_failure_threshold: int = 5
+    circuit_breaker_recovery_timeout: int = 60
+
     # Logging
     log_level: str = "INFO"
+    structured_logging: bool = False
 
 
 settings = Settings()

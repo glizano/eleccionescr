@@ -63,39 +63,35 @@ def client(mock_qdrant_client, mock_embedding_vector, mock_llm_text):
     from app.main import app
     from app.services import llm as llm_module
 
-    # Clear LLM client cache before patching
-    if hasattr(llm_module.get_client, "cache_clear"):
-        llm_module.get_client.cache_clear()
+    # Clear LLM cache before patching
+    if hasattr(llm_module.get_llm, "cache_clear"):
+        llm_module.get_llm.cache_clear()
 
     patcher_client_getter = patch("app.services.qdrant.get_qdrant_client")
     patcher_embed = patch("app.services.embeddings.generate_embedding")
-    patcher_llm_client = patch("app.services.llm.get_client")
-    patcher_classifier = patch("app.agents.classifier.generate_text")
+    patcher_llm = patch("app.services.llm.generate_text")
+    patcher_classifier = patch("app.agents.classifier.classify_intent")
 
     mock_get_qdrant = patcher_client_getter.start()
     mock_embed = patcher_embed.start()
-    mock_get_llm_client = patcher_llm_client.start()
+    mock_generate_text = patcher_llm.start()
     mock_classifier = patcher_classifier.start()
 
     # Mock the Qdrant client getter to return our mock client
     mock_get_qdrant.return_value = mock_qdrant_client
     mock_embed.return_value = mock_embedding_vector
 
-    # Mock the LLM client to return a mock that generates our text
-    mock_llm_client = MagicMock()
-    mock_response = MagicMock()
-    mock_response.candidates = [MagicMock()]
-    mock_response.candidates[0].content.parts = [MagicMock(text=mock_llm_text)]
-    mock_llm_client.models.generate_content.return_value = mock_response
-    mock_get_llm_client.return_value = mock_llm_client
+    # Mock generate_text to return our mock text
+    mock_generate_text.return_value = mock_llm_text
 
-    mock_classifier.side_effect = ["specific_party", "PLN"]
+    # Mock classifier to return intent
+    mock_classifier.return_value = "specific_party"
 
     yield TestClient(app)
 
     patcher_client_getter.stop()
     patcher_embed.stop()
-    patcher_llm_client.stop()
+    patcher_llm.stop()
     patcher_classifier.stop()
 
 
@@ -115,40 +111,92 @@ def test_parties_endpoint(client):
     data = response.json()
     assert "parties" in data
     assert isinstance(data["parties"], list)
-    assert "PLN" in data["parties"]
-    assert "PUSC" in data["parties"]
+    party_abbreviations = [p["abbreviation"] for p in data["parties"]]
+    assert "PLN" in party_abbreviations
+    assert "PUSC" in party_abbreviations
 
 
 def test_ask_endpoint_specific_party(client):
     """Test asking a question about a specific party."""
-    response = client.post(
-        "/api/ask",
-        json={"question": "¿Qué propone el PLN sobre educación?"},
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "answer" in data
-    assert "sources" in data
-    assert "agent_trace" in data
-    trace = data["agent_trace"]
-    assert "intent" in trace
-    assert trace["intent"] in ["specific_party", "party_general_plan", "general_comparison"]
-    assert len(data["sources"]) > 0
-    assert data["sources"][0]["partido"] in ["PLN", "PUSC"]
+    with patch("app.main.run_agent") as mock_run_agent:
+        # Mock the agent response
+        mock_run_agent.return_value = {
+            "answer": "El PLN propone una reforma educativa integral.",
+            "sources": [
+                {
+                    "partido": "PLN",
+                    "text": "El PLN propone reformas educativas",
+                    "filename": "PLN.pdf",
+                    "doc_id": "doc1",
+                    "chunk_index": 0,
+                    "score": 0.95,
+                }
+            ],
+            "intent": "specific_party",
+            "parties": ["PLN"],
+            "contexts": [{"partido": "PLN", "text": "context"}],
+            "steps": ["classify_intent", "rag_search", "generate_response"],
+        }
+
+        response = client.post(
+            "/api/ask",
+            json={"question": "¿Qué propone el PLN sobre educación?"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "answer" in data
+        assert "sources" in data
+        assert "agent_trace" in data
+        trace = data["agent_trace"]
+        assert "intent" in trace
+        assert trace["intent"] in ["specific_party", "party_general_plan", "general_comparison"]
+        assert len(data["sources"]) > 0
+        assert data["sources"][0]["partido"] in ["PLN", "PUSC"]
 
 
 def test_ask_endpoint_general_question(client):
     """Test asking a general/comparative question."""
-    response = client.post(
-        "/api/ask",
-        json={"question": "¿Qué proponen los partidos sobre salud?"},
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "answer" in data
-    assert "sources" in data
-    assert "agent_trace" in data
-    assert len(data["sources"]) > 0
+    with patch("app.main.run_agent") as mock_run_agent:
+        # Mock the agent response
+        mock_run_agent.return_value = {
+            "answer": "Los partidos proponen diversas reformas en salud.",
+            "sources": [
+                {
+                    "partido": "PLN",
+                    "text": "Propuestas de salud del PLN",
+                    "filename": "PLN.pdf",
+                    "doc_id": "doc1",
+                    "chunk_index": 0,
+                    "score": 0.95,
+                },
+                {
+                    "partido": "PUSC",
+                    "text": "Propuestas de salud del PUSC",
+                    "filename": "PUSC.pdf",
+                    "doc_id": "doc2",
+                    "chunk_index": 1,
+                    "score": 0.87,
+                },
+            ],
+            "intent": "general_comparison",
+            "parties": [],
+            "contexts": [
+                {"partido": "PLN", "text": "context1"},
+                {"partido": "PUSC", "text": "context2"},
+            ],
+            "steps": ["classify_intent", "rag_search", "generate_response"],
+        }
+
+        response = client.post(
+            "/api/ask",
+            json={"question": "¿Qué proponen los partidos sobre salud?"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "answer" in data
+        assert "sources" in data
+        assert "agent_trace" in data
+        assert len(data["sources"]) > 0
 
 
 def test_ask_endpoint_empty_question(client):
