@@ -39,15 +39,17 @@ class IntentClassifierState(TypedDict):
     """State for intent classification"""
 
     question: str
-    intent: Literal["specific_party", "party_general_plan", "general_comparison", "metadata_query", "unclear"]
+    intent: Literal[
+        "specific_party", "party_general_plan", "general_comparison", "metadata_query", "unclear"
+    ]
 
 
 class IntentClassification(BaseModel):
     """Structured output for intent classification"""
 
-    intent: Literal["specific_party", "party_general_plan", "general_comparison", "metadata_query", "unclear"] = (
-        Field(description="The classified intent of the question")
-    )
+    intent: Literal[
+        "specific_party", "party_general_plan", "general_comparison", "metadata_query", "unclear"
+    ] = Field(description="The classified intent of the question")
 
 
 class PartyExtraction(BaseModel):

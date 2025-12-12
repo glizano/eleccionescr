@@ -211,53 +211,71 @@ Pregunta: {state["question"]}"""
 def metadata_query_node(state: AgentState) -> AgentState:
     """Node: Answer metadata questions directly without RAG"""
     logger.info("[Agent] Answering metadata query...")
-    
+
     question = state["question"].lower()
-    
+
     # Build comprehensive answer from metadata
     answer_parts = []
-    
+
     # Check if asking about a specific candidate
     for candidate, party_abbr in CANDIDATE_TO_PARTY.items():
         if any(part.lower() in question for part in candidate.split() if len(part) > 4):
-            party_data = next((p for p in PARTIES_METADATA if p["abbreviation"] == party_abbr), None)
+            party_data = next(
+                (p for p in PARTIES_METADATA if p["abbreviation"] == party_abbr), None
+            )
             if party_data:
-                answer_parts.append(f"{candidate} es el candidato presidencial del partido {party_data['name']} ({party_abbr}).")
-    
+                answer_parts.append(
+                    f"{candidate} es el candidato presidencial del partido {party_data['name']} ({party_abbr})."
+                )
+
     # Check if asking about a specific party abbreviation
     for party in PARTIES_METADATA:
         abbr = party["abbreviation"]
         if abbr.lower() in question:
             if "candidato" in question:
-                answer_parts.append(f"El candidato presidencial del {party['name']} ({abbr}) es {party['candidate']}.")
+                answer_parts.append(
+                    f"El candidato presidencial del {party['name']} ({abbr}) es {party['candidate']}."
+                )
             elif "nombre" in question or "significa" in question:
                 answer_parts.append(f"{abbr} significa {party['name']}.")
             elif "partido" in question and not answer_parts:  # General info
-                answer_parts.append(f"El {party['name']} ({abbr}) tiene como candidato presidencial a {party['candidate']}.")
-    
+                answer_parts.append(
+                    f"El {party['name']} ({abbr}) tiene como candidato presidencial a {party['candidate']}."
+                )
+
     # Check if asking about party by full name
     for party_name, party_abbr in PARTY_NAME_TO_ABBR.items():
         if party_name.lower() in question:
-            party_data = next((p for p in PARTIES_METADATA if p["abbreviation"] == party_abbr), None)
+            party_data = next(
+                (p for p in PARTIES_METADATA if p["abbreviation"] == party_abbr), None
+            )
             if party_data and not answer_parts:
                 if "candidato" in question:
-                    answer_parts.append(f"El candidato presidencial del {party_name} es {party_data['candidate']}.")
+                    answer_parts.append(
+                        f"El candidato presidencial del {party_name} es {party_data['candidate']}."
+                    )
                 elif "sigla" in question:
                     answer_parts.append(f"La sigla del {party_name} es {party_abbr}.")
-    
+
     # Fallback: provide general info about all parties
     if not answer_parts:
         if "candidatos" in question or "partidos" in question:
-            answer_parts.append("Los 20 partidos inscritos para las elecciones de Costa Rica 2026 son:\n\n")
+            answer_parts.append(
+                "Los 20 partidos inscritos para las elecciones de Costa Rica 2026 son:\n\n"
+            )
             for party in PARTIES_METADATA:
-                answer_parts.append(f"- **{party['abbreviation']}** ({party['name']}): {party['candidate']}")
+                answer_parts.append(
+                    f"- **{party['abbreviation']}** ({party['name']}): {party['candidate']}"
+                )
         else:
-            answer_parts.append("No pude identificar exactamente qué información necesitas. ¿Podrías ser más específico?")
-    
+            answer_parts.append(
+                "No pude identificar exactamente qué información necesitas. ¿Podrías ser más específico?"
+            )
+
     answer = "\n".join(answer_parts)
-    
+
     logger.info(f"[Agent] Metadata answer generated: {answer[:100]}...")
-    
+
     return {
         **state,
         "answer": answer,
