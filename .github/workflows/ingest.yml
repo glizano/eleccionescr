@@ -20,6 +20,24 @@ on:
         description: 'Embedding model name'
         required: false
         default: 'text-embedding-3-large'
+      recreate_collection:
+        description: 'Force recreate collection (delete and recreate from scratch)'
+        required: false
+        type: boolean
+        default: false
+      verify_mode:
+        description: 'Quality verification mode (quick|full|custom)'
+        required: false
+        type: choice
+        options:
+          - quick
+          - custom
+          - full
+        default: 'quick'
+      verify_sample_size:
+        description: 'Chunks per party to verify (for custom mode: 5-50)'
+        required: false
+        default: '10'
 
 jobs:
   validate:
@@ -99,11 +117,98 @@ jobs:
           EMBEDDING_PROVIDER: ${{ github.event.inputs.embedding_provider }}
           EMBEDDING_MODEL: ${{ github.event.inputs.embedding_model }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RECREATE_COLLECTION: ${{ github.event.inputs.recreate_collection }}
         run: |
           echo "🚀 Starting ingestion to Qdrant..."
           echo "Collection: $QDRANT_COLLECTION"
           echo "URL: $QDRANT_URL"
           echo "Embedding Provider: $EMBEDDING_PROVIDER"
           echo "Embedding Model: $EMBEDDING_MODEL"
+          if [ "$RECREATE_COLLECTION" = "true" ]; then
+            echo "🔄 RECREATE MODE ENABLED: Will delete and recreate collection"
+          fi
           uv run main.py
           echo "✅ Ingestion completed successfully"
+
+  verify-quality:
+    name: Verify Data Quality
+    runs-on: ubuntu-latest
+    needs: ingest
+    defaults:
+      run:
+        working-directory: ./ingest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "ingest/.python-version"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Prepare verification mode
+        id: verify_config
+        run: |
+          MODE="${{ github.event.inputs.verify_mode }}"
+          SAMPLE_SIZE="${{ github.event.inputs.verify_sample_size }}"
+          
+          if [ "$MODE" = "quick" ]; then
+            echo "mode=quick" >> $GITHUB_OUTPUT
+            echo "VERIFY_SAMPLE_SIZE=10" >> $GITHUB_ENV
+            echo "description=📌 Quick mode: 10 samples per party" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "custom" ]; then
+            echo "mode=custom" >> $GITHUB_OUTPUT
+            echo "VERIFY_SAMPLE_SIZE=$SAMPLE_SIZE" >> $GITHUB_ENV
+            echo "description=📌 Custom mode: $SAMPLE_SIZE samples per party" >> $GITHUB_OUTPUT
+          elif [ "$MODE" = "full" ]; then
+            echo "mode=full" >> $GITHUB_OUTPUT
+            echo "VERIFY_FULL_SCAN=true" >> $GITHUB_ENV
+            echo "description=🔍 Full scan: All chunks" >> $GITHUB_OUTPUT
+          else
+            echo "mode=quick" >> $GITHUB_OUTPUT
+            echo "VERIFY_SAMPLE_SIZE=10" >> $GITHUB_ENV
+            echo "description=📌 Quick mode: 10 samples per party" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verify Data Quality
+        env:
+          QDRANT_URL: ${{ github.event.inputs.qdrant_url }}
+          QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+          QDRANT_COLLECTION: ${{ github.event.inputs.collection_name }}
+          VERIFY_SAMPLE_SIZE: ${{ env.VERIFY_SAMPLE_SIZE }}
+          VERIFY_FULL_SCAN: ${{ env.VERIFY_FULL_SCAN }}
+        run: |
+          echo "🔍 Verifying data quality in Qdrant..."
+          echo "${{ steps.verify_config.outputs.description }}"
+          uv run python verify_quality.py
+          
+      - name: Check for critical issues
+        env:
+          QDRANT_URL: ${{ github.event.inputs.qdrant_url }}
+          QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+          QDRANT_COLLECTION: ${{ github.event.inputs.collection_name }}
+          VERIFY_SAMPLE_SIZE: ${{ env.VERIFY_SAMPLE_SIZE }}
+          VERIFY_FULL_SCAN: ${{ env.VERIFY_FULL_SCAN }}
+        run: |
+          # Run quality check and capture output
+          OUTPUT=$(uv run python verify_quality.py 2>&1)
+          echo "$OUTPUT"
+          
+          # Check if there are critical issues
+          if echo "$OUTPUT" | grep -q "🔴 CRITICAL"; then
+            echo ""
+            echo "❌ QUALITY CHECK FAILED: Critical issues detected!"
+            echo "⚠️  Some parties have corrupted text data."
+            echo "📋 Review the output above and fix the source PDFs."
+            exit 1
+          else
+            echo ""
+            echo "✅ QUALITY CHECK PASSED: All data looks good!"
+          fi

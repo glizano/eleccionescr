@@ -33,6 +33,15 @@ docker compose --env-file .env up --build
 - Backend docs (Swagger): `http://localhost:8000/docs`
 - Qdrant: `http://localhost:6333`
 
+4. **Verifica la calidad de los datos ingestados:**
+
+```bash
+cd ingest
+python verify_quality.py
+```
+
+Este script detecta problemas de encoding o texto corrupto en los PDFs ingestados y te alertará si algún partido tiene datos de baja calidad.
+
 Desarrollo local (sin docker-compose)
 
 - Backend: entra a `backend-py/` y usa `uv sync` (revisa `pyproject.toml`), luego `uv run uvicorn app.main:app --reload`.

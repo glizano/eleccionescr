@@ -41,13 +41,22 @@ Este documento explica los workflows configurados y cómo usarlos.
 2. Proporciona:
    - `qdrant_url`: URL de tu instancia Qdrant
    - `collection_name`: Nombre de la colección (default: `planes_gobierno`)
+   - `embedding_provider`: `sentence_transformers` u `openai` (default: `openai`)
+   - `embedding_model`: Modelo a usar (default: `text-embedding-3-large`)
+
+**Secretos requeridos:**
+- `OPENAI_API_KEY` - Requerido si usas embedding provider `openai`
 
 **Secretos opcionales:**
 - `QDRANT_API_KEY` - Solo si usas Qdrant Cloud u otra instancia con autenticación
 
 **Jobs:**
 - **Validate:** Verifica imports y sintaxis
-- **Ingest:** Ejecuta el proceso de ingesta
+- **Ingest:** Ejecuta el proceso de ingesta con extracción mejorada de PDFs
+- **Verify Quality:** 🆕 Valida la calidad de los datos ingestados
+  - Detecta texto corrupto por partido
+  - Falla el workflow si encuentra problemas críticos (>50% corrupción)
+  - Muestra estadísticas detalladas y muestras de texto problemático
 
 **Estado:** ✅ Funcionando (manual-only)
 
