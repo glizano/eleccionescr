@@ -12,6 +12,14 @@ on:
         description: 'Qdrant collection name'
         required: false
         default: 'planes_gobierno'
+      embedding_provider:
+        description: 'Embedding provider (sentence_transformers or openai)'
+        required: false
+        default: 'sentence_transformers'
+      embedding_model:
+        description: 'Embedding model name'
+        required: false
+        default: 'sentence-transformers/all-MiniLM-L6-v2'
 
 jobs:
   validate:
