@@ -15,11 +15,11 @@ on:
       embedding_provider:
         description: 'Embedding provider (sentence_transformers or openai)'
         required: false
-        default: 'sentence_transformers'
+        default: 'openai'
       embedding_model:
         description: 'Embedding model name'
         required: false
-        default: 'sentence-transformers/all-MiniLM-L6-v2'
+        default: 'text-embedding-3-large'
 
 jobs:
   validate:
@@ -85,9 +85,14 @@ jobs:
           QDRANT_URL: ${{ github.event.inputs.qdrant_url }}
           QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
           QDRANT_COLLECTION: ${{ github.event.inputs.collection_name }}
+          EMBEDDING_PROVIDER: ${{ github.event.inputs.embedding_provider }}
+          EMBEDDING_MODEL: ${{ github.event.inputs.embedding_model }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "🚀 Starting ingestion to Qdrant..."
           echo "Collection: $QDRANT_COLLECTION"
           echo "URL: $QDRANT_URL"
+          echo "Embedding Provider: $EMBEDDING_PROVIDER"
+          echo "Embedding Model: $EMBEDDING_MODEL"
           uv run main.py
           echo "✅ Ingestion completed successfully"
