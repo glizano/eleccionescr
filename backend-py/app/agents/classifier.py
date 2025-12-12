@@ -7,8 +7,29 @@ from app.services.llm import get_llm
 
 logger = logging.getLogger(__name__)
 
-# Known parties
-KNOWN_PARTIES = ["PLN", "PUSC", "PNR", "FA", "PLP", "PPSO", "CAC"]
+# Known parties - Complete list of all parties with government plans
+KNOWN_PARTIES = [
+    "ACRM",  # Aquí Costa Rica Manda
+    "CAC",   # Coalición Agenda Ciudadana
+    "CDS",   # Centro Democrático y Social
+    "CR1",   # Alianza Costa Rica Primero
+    "FA",    # Frente Amplio
+    "PA",    # Avanza
+    "PDLCT", # De la Clase Trabajadora
+    "PEL",   # Esperanza y Libertad
+    "PEN",   # Esperanza Nacional
+    "PIN",   # Integración Nacional
+    "PJSC",  # Justicia Social Costarricense
+    "PLN",   # Liberación Nacional
+    "PLP",   # Liberal Progresista
+    "PNG",   # Nueva Generación
+    "PNR",   # Nueva República
+    "PPSO",  # Pueblo Soberano
+    "PSD",   # Progreso Social Democrático
+    "PUCD",  # Unión Costarricense Democrática
+    "PUSC",  # Unidad Social Cristiana
+    "UP",    # Unidos Podemos
+]
 
 
 class IntentClassifierState(TypedDict):
@@ -51,9 +72,12 @@ Clasifica la pregunta en una de estas categorías:
 Ejemplos:
 - "¿Qué propone el PLN sobre educación?" → specific_party (tema específico: educación)
 - "¿Qué dice el PUSC sobre salud?" → specific_party (tema específico: salud)
+- "¿Cuál es la propuesta del FA para seguridad?" → specific_party (tema específico: seguridad)
+- "¿Qué plantea el PEN sobre empleo?" → specific_party (tema específico: empleo)
 - "¿Qué plantea el plan del PLN?" → party_general_plan (pregunta general sobre todo el plan)
 - "¿Cuál es el plan del PUSC?" → party_general_plan (pregunta general sobre todo el plan)
 - "Resume el plan de gobierno del PNR" → party_general_plan (resumen completo)
+- "Cuéntame sobre el plan del PJSC" → party_general_plan (resumen completo)
 - "¿Qué proponen los partidos sobre seguridad?" → general_comparison (múltiples partidos)
 - "Compara las propuestas de PLN y PUSC" → general_comparison (comparación)
 - "¿Cuál es la mejor propuesta educativa?" → general_comparison (comparación implícita)
@@ -96,6 +120,9 @@ Ejemplos:
 - "Compara PLN y PUSC" → ["PLN", "PUSC"]
 - "¿Qué dicen sobre educación?" → []
 - "El Partido Liberación Nacional propone..." → ["PLN"]
+- "¿Cuál es el plan del FA?" → ["FA"]
+- "Compara PEN, PEL y PJSC" → ["PEN", "PEL", "PJSC"]
+- "¿Qué dice Esperanza Nacional sobre salud?" → ["PEN"]
 
 Pregunta: {question}"""
 

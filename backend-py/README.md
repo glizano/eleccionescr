@@ -160,7 +160,7 @@ Clasifica la pregunta en:
 ### Party Extractor Agent
 Extrae nombres de partidos mencionados usando LLM con few-shot examples.
 
-Partidos conocidos: PLN, PUSC, PNR, FA, PLP, PPSO, CAC
+Partidos conocidos (20 partidos): ACRM, CAC, CDS, CR1, FA, PA, PDLCT, PEL, PEN, PIN, PJSC, PLN, PLP, PNG, PNR, PPSO, PSD, PUCD, PUSC, UP
 
 ### RAG Agent
 Ejecuta búsqueda vectorial con estrategias adaptativas:
