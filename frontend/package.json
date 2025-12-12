@@ -14,7 +14,7 @@
     "type-check": "astro check"
   },
   "dependencies": {
-    "astro": "^5.16.2"
+    "astro": "^5.16.5"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.17.0",
