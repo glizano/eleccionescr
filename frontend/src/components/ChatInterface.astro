@@ -45,6 +45,9 @@
   // Get backend URL from environment variable
   const BACKEND_URL = import.meta.env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
+  // Conversation history for context-aware responses
+  let conversationHistory: Array<{role: 'user' | 'assistant', content: string}> = [];
+
   // Fetch rate limit configuration on load
   async function loadRateLimits() {
     try {
@@ -84,13 +87,16 @@
     const loadingId = addLoadingIndicator();
 
     try {
-      // 3. Call API
+      // 3. Call API with conversation history for context
       const response = await fetch(`${BACKEND_URL}/api/ask`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ 
+          question,
+          last_messages: conversationHistory.slice(-4) // Send last 4 messages (2 Q&A pairs)
+        }),
       });
 
       // Handle rate limit error (429)
@@ -108,6 +114,15 @@
       // 4. Remove Loading & Add Bot Message
       removeMessage(loadingId);
       addBotMessage(data);
+
+      // 5. Update conversation history for context
+      conversationHistory.push({ role: 'user', content: question });
+      conversationHistory.push({ role: 'assistant', content: data.answer });
+      
+      // Keep only last 10 messages (5 pairs) to avoid memory issues
+      if (conversationHistory.length > 10) {
+        conversationHistory = conversationHistory.slice(-10);
+      }
 
     } catch (error) {
       console.error(error);

@@ -90,8 +90,24 @@ async def ask(ask_request: AskRequest, request: Request):
     try:
         logger.info(f"[API] Question received: {ask_request.question[:100]}...")
 
+        # Build conversation history from last messages if provided
+        conversation_history = None
+        if ask_request.last_messages:
+            # Take last 2-3 exchanges for context
+            recent_messages = ask_request.last_messages[-4:]  # Last 2 Q&A pairs
+            history_parts = []
+            for msg in recent_messages:
+                role = "Usuario" if msg.role == "user" else "Asistente"
+                history_parts.append(f"{role}: {msg.content[:200]}")
+            conversation_history = "\n".join(history_parts)
+            logger.info(f"[API] Using conversation history with {len(recent_messages)} messages")
+
         # Run agent workflow with session_id for Langfuse tracing
-        result = run_agent(ask_request.question, session_id=ask_request.session_id)
+        result = run_agent(
+            ask_request.question,
+            session_id=ask_request.session_id,
+            conversation_history=conversation_history,
+        )
 
         # Build response
         response = AskResponse(

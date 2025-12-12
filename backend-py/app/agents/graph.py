@@ -23,13 +23,15 @@ class AgentState(TypedDict):
     sources: list
     steps: list[str]  # Track execution steps
     langfuse_trace: Any  # Langfuse trace for observability
+    conversation_history: str | None  # Context from previous messages
 
 
 def classify_intent_node(state: AgentState) -> AgentState:
     """Node: Classify user intent"""
     logger.info("[Agent] Classifying intent...")
 
-    intent = classify_intent(state["question"])
+    conversation_history = state.get("conversation_history")
+    intent = classify_intent(state["question"], conversation_history)
 
     return {**state, "intent": intent, "steps": state.get("steps", []) + [f"Intent: {intent}"]}
 
@@ -70,14 +72,14 @@ def rag_search_node(state: AgentState) -> AgentState:
         # Strategy 3: General question - get chunks from multiple parties
         logger.info("[Agent] General question - searching across all parties")
 
-        # First, get top results without filter
+        # First, get top results without filter (more results for 20 parties)
         all_results = search_qdrant(
             query_vector=query_vector,
             partido_filter=None,
-            limit=15,  # Get more results initially
+            limit=40,  # Increased to cover 20 parties (2 per party)
         )
 
-        # Group by party and take top 2-3 from each
+        # Group by party and take top 2 from each
         from collections import defaultdict
 
         by_party = defaultdict(list)
@@ -86,16 +88,16 @@ def rag_search_node(state: AgentState) -> AgentState:
             partido = ctx.payload.get("partido", "Unknown")
             by_party[partido].append(ctx)
 
-        # Take top 2 chunks from each party (up to 5 parties)
+        # Take top 2 chunks from each party (cover all 20 parties if relevant)
         contexts = []
-        for _partido, chunks in sorted(by_party.items(), key=lambda x: len(x[1]), reverse=True)[:5]:
+        for _partido, chunks in sorted(by_party.items(), key=lambda x: x[0]):
             contexts.extend(chunks[:2])  # Top 2 from each party
 
-        # Sort by score to keep best overall
-        contexts = sorted(contexts, key=lambda x: x.score, reverse=True)[:10]
+        # Sort by score to keep best overall (increased to 20 for more coverage)
+        contexts = sorted(contexts, key=lambda x: x.score, reverse=True)[:20]
 
         logger.info(
-            f"[Agent] Retrieved chunks from {len(by_party)} parties: {list(by_party.keys())}"
+            f"[Agent] Retrieved chunks from {len(by_party)} parties: {sorted(by_party.keys())}"
         )
 
     else:
@@ -251,13 +253,16 @@ def build_agent_graph():
 agent_graph = build_agent_graph()
 
 
-def run_agent(question: str, session_id: str | None = None) -> dict:
+def run_agent(
+    question: str, session_id: str | None = None, conversation_history: str | None = None
+) -> dict:
     """
     Run the agent graph with a question
 
     Args:
         question: The user's question
         session_id: Optional session ID for tracking
+        conversation_history: Optional context from previous messages
 
     Returns: Final state with answer, sources, and trace
     """
@@ -267,7 +272,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict:
     with langfuse_trace(
         name="agent-workflow",
         session_id=session_id,
-        metadata={"question_length": len(question)},
+        metadata={"question_length": len(question), "has_history": conversation_history is not None},
     ) as trace:
         initial_state = {
             "question": question,
@@ -278,6 +283,7 @@ def run_agent(question: str, session_id: str | None = None) -> dict:
             "sources": [],
             "steps": [],
             "langfuse_trace": trace,
+            "conversation_history": conversation_history,
         }
 
         # Run the graph

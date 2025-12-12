@@ -142,10 +142,10 @@ curl -X POST http://localhost:8000/api/ask \
   "agent_trace": {
     "intent": "general_comparison",
     "parties_detected": [],
-    "chunks_retrieved": 5,
+    "chunks_retrieved": 20,
     "steps": [
       "Intent: general_comparison",
-      "Retrieved 5 chunks",
+      "Retrieved 20 chunks from 20 parties",
       "Response generated"
     ]
   }
@@ -174,7 +174,7 @@ Partidos conocidos (20 partidos): ACRM, CAC, CDS, CR1, FA, PA, PDLCT, PEL, PEN, 
 Ejecuta búsqueda vectorial con estrategias adaptativas:
 - **5 chunks filtrados** por partido si intent = specific_party (temas específicos)
 - **15 chunks filtrados** por partido si intent = party_general_plan (resumen completo)
-- **10 chunks balanceados** entre partidos si intent = general_comparison (2 por partido)
+- **20 chunks balanceados** entre partidos si intent = general_comparison (hasta 2 por partido de los 20 partidos)
 
 ### Response Generator Agent
 Genera respuesta final con:

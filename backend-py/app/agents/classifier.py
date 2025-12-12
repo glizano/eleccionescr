@@ -55,13 +55,21 @@ class PartyExtraction(BaseModel):
     )
 
 
-def classify_intent(question: str) -> str:
+def classify_intent(question: str, conversation_history: str | None = None) -> str:
     """
     Classify if question is about a specific party or general/comparison
 
+    Args:
+        question: The current question
+        conversation_history: Optional conversation context for follow-up questions
+
     Returns: "specific_party", "party_general_plan", "general_comparison", or "unclear"
     """
-    prompt = f"""Eres un clasificador de intenciones para preguntas sobre planes de gobierno.
+    context_note = ""
+    if conversation_history:
+        context_note = f"\n\nCONTEXTO DE LA CONVERSACIÓN PREVIA:\n{conversation_history}\n"
+    
+    prompt = f"""Eres un clasificador de intenciones para preguntas sobre planes de gobierno.{context_note}
 
 Clasifica la pregunta en una de estas categorías:
 - "specific_party": La pregunta es sobre UN TEMA O ASPECTO ESPECÍFICO de un partido (ej: educación, salud, seguridad)
@@ -82,7 +90,11 @@ Ejemplos:
 - "Compara las propuestas de PLN y PUSC" → general_comparison (comparación)
 - "¿Cuál es la mejor propuesta educativa?" → general_comparison (comparación implícita)
 
-Pregunta: {question}"""
+IMPORTANTE: Si hay contexto de conversación previa y la pregunta es de seguimiento (ej: "Y el PIN?", "¿Y qué dice el PUSC?"):
+- Si el contexto menciona un tema específico → specific_party
+- Si el contexto no menciona tema específico → party_general_plan
+
+Pregunta actual: {question}"""
 
     try:
         llm = get_llm()
