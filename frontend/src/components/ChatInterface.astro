@@ -172,11 +172,17 @@
     contentDiv.innerHTML = marked.parse(data.answer) as string;
     msgDiv.appendChild(contentDiv);
 
-    // Sources
+    // Sources (collapsible)
     if (data.sources && data.sources.length > 0) {
-      const sourcesDiv = document.createElement('div');
-      sourcesDiv.className = 'sources-container';
-      sourcesDiv.innerHTML = `<div class="sources-title">Fuentes consultadas:</div>`;
+      const sourcesDetails = document.createElement('details');
+      sourcesDetails.className = 'sources-collapsible';
+      
+      const sourcesSummary = document.createElement('summary');
+      sourcesSummary.innerHTML = `📚 Ver fuentes (${data.sources.length})`;
+      sourcesDetails.appendChild(sourcesSummary);
+      
+      const sourcesContainer = document.createElement('div');
+      sourcesContainer.className = 'sources-content';
       
       data.sources.forEach((source: any) => {
         const sourceCard = document.createElement('div');
@@ -188,9 +194,11 @@
           </div>
           <div class="source-text-mini">${source.text}</div>
         `;
-        sourcesDiv.appendChild(sourceCard);
+        sourcesContainer.appendChild(sourceCard);
       });
-      msgDiv.appendChild(sourcesDiv);
+      
+      sourcesDetails.appendChild(sourcesContainer);
+      msgDiv.appendChild(sourcesDetails);
     }
 
     // Trace (Agent details)
@@ -393,24 +401,40 @@
     opacity: 0.8;
   }
 
-  /* Sources Styles */
-  .sources-container {
+  /* Sources Collapsible Styles */
+  .sources-collapsible {
     margin-top: 8px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
     width: 100%;
-    max-width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .sources-collapsible summary {
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .sources-collapsible summary:hover {
+    background: var(--border-color);
   }
 
-  .sources-title {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  .sources-content {
+    padding: 12px;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
   }
 
   .source-card-mini {
-    background: var(--bg-primary);
+    background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 10px;
@@ -418,9 +442,14 @@
     font-size: 0.85rem;
     transition: background 0.2s;
   }
+
+  .source-card-mini:last-child {
+    margin-bottom: 0;
+  }
   
   .source-card-mini:hover {
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
+    border-color: var(--accent-color);
   }
 
   .source-header-mini {
