@@ -55,7 +55,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version-file: "ingest/.python-version"
 
@@ -82,7 +82,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version-file: "ingest/.python-version"
 
@@ -146,7 +146,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version-file: "ingest/.python-version"
 
