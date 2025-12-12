@@ -78,7 +78,18 @@ jobs:
           else
             echo "✅ QDRANT_API_KEY is configured"
           fi
+          
+          if [ "${{ github.event.inputs.embedding_provider }}" = "openai" ]; then
+            if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+              echo "❌ ERROR: OPENAI_API_KEY required for OpenAI embeddings"
+              exit 1
+            else
+              echo "✅ OPENAI_API_KEY is configured"
+            fi
+          fi
+          
           echo "Using Qdrant URL: ${{ github.event.inputs.qdrant_url }}"
+          echo "Using Embedding Provider: ${{ github.event.inputs.embedding_provider }}"
 
       - name: Run Ingestion
         env:
