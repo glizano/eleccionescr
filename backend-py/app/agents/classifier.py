@@ -10,25 +10,25 @@ logger = logging.getLogger(__name__)
 # Known parties - Complete list of all parties with government plans
 KNOWN_PARTIES = [
     "ACRM",  # Aquí Costa Rica Manda
-    "CAC",   # Coalición Agenda Ciudadana
-    "CDS",   # Centro Democrático y Social
-    "CR1",   # Alianza Costa Rica Primero
-    "FA",    # Frente Amplio
-    "PA",    # Avanza
-    "PDLCT", # De la Clase Trabajadora
-    "PEL",   # Esperanza y Libertad
-    "PEN",   # Esperanza Nacional
-    "PIN",   # Integración Nacional
+    "CAC",  # Coalición Agenda Ciudadana
+    "CDS",  # Centro Democrático y Social
+    "CR1",  # Alianza Costa Rica Primero
+    "FA",  # Frente Amplio
+    "PA",  # Avanza
+    "PDLCT",  # De la Clase Trabajadora
+    "PEL",  # Esperanza y Libertad
+    "PEN",  # Esperanza Nacional
+    "PIN",  # Integración Nacional
     "PJSC",  # Justicia Social Costarricense
-    "PLN",   # Liberación Nacional
-    "PLP",   # Liberal Progresista
-    "PNG",   # Nueva Generación
-    "PNR",   # Nueva República
+    "PLN",  # Liberación Nacional
+    "PLP",  # Liberal Progresista
+    "PNG",  # Nueva Generación
+    "PNR",  # Nueva República
     "PPSO",  # Pueblo Soberano
-    "PSD",   # Progreso Social Democrático
+    "PSD",  # Progreso Social Democrático
     "PUCD",  # Unión Costarricense Democrática
     "PUSC",  # Unidad Social Cristiana
-    "UP",    # Unidos Podemos
+    "UP",  # Unidos Podemos
 ]
 
 
