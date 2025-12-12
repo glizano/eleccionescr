@@ -20,7 +20,20 @@ docker compose up --build frontend
 
 Variables y API
 
-- `BACKEND_URL` en el `docker-compose.yml` apunta al servicio `backend` (por defecto `http://backend:8000`).
+El frontend ahora usa variables de entorno para configurar la URL del backend:
+
+- **`PUBLIC_BACKEND_URL`** - URL del backend API
+  - Desarrollo local: `http://localhost:8000`
+  - Docker Compose: `http://localhost:8000` (configurado en `.env`)
+  - Producción/Railway: `https://your-backend.railway.app` (configurar en tiempo de build)
+
+Para desarrollo local, crea un archivo `.env` en la carpeta `frontend/`:
+
+```bash
+PUBLIC_BACKEND_URL=http://localhost:8000
+```
+
+Para despliegue en Railway o cualquier plataforma cloud, asegúrate de configurar `PUBLIC_BACKEND_URL` como variable de entorno de build apuntando a tu backend en producción.
 
 Estructura importante:
 

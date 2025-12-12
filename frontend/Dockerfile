@@ -7,6 +7,11 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# Accept build argument for backend URL and set as environment variable
+ARG PUBLIC_BACKEND_URL=http://localhost:8000
+ENV PUBLIC_BACKEND_URL=${PUBLIC_BACKEND_URL}
+
 RUN npm run build
 
 # Stage 2: Serve

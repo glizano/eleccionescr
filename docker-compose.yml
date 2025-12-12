@@ -114,6 +114,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - PUBLIC_BACKEND_URL=${PUBLIC_BACKEND_URL:-http://localhost:8000}
     container_name: frontend
     ports:
       - "80:80"
