@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from app.party_metadata import (
     PARTIES_METADATA,
 )
-from app.services.llm import get_llm
+from app.services.llm import get_llm, is_resource_exhausted_error
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,12 @@ class IntentClassifierState(TypedDict):
 
     question: str
     intent: Literal[
-        "specific_party", "party_general_plan", "general_comparison", "metadata_query", "unclear"
+        "specific_party",
+        "party_general_plan",
+        "general_comparison",
+        "metadata_query",
+        "unclear",
+        "rate_limited",
     ]
 
 
@@ -48,7 +53,11 @@ class IntentClassification(BaseModel):
     """Structured output for intent classification"""
 
     intent: Literal[
-        "specific_party", "party_general_plan", "general_comparison", "metadata_query", "unclear"
+        "specific_party",
+        "party_general_plan",
+        "general_comparison",
+        "metadata_query",
+        "unclear",
     ] = Field(description="The classified intent of the question")
 
 
@@ -115,6 +124,12 @@ Pregunta actual: {question}"""
         return result.intent
 
     except Exception as e:
+        if is_resource_exhausted_error(e):
+            logger.warning(
+                "Intent classification rate limited or resource exhausted; stopping workflow"
+            )
+            return "rate_limited"
+
         logger.error(f"Error classifying intent: {e}")
         return "unclear"
 
@@ -179,5 +194,11 @@ PREGUNTA: {question}"""
         return valid_parties
 
     except Exception as e:
+        if is_resource_exhausted_error(e):
+            logger.warning(
+                "Party extraction rate limited or resource exhausted; returning empty list"
+            )
+            return []
+
         logger.error(f"Error extracting parties: {e}")
         return []

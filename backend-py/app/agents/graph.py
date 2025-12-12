@@ -27,6 +27,19 @@ class AgentState(TypedDict):
     conversation_history: str | None  # Context from previous messages
 
 
+def rate_limited_node(state: AgentState) -> AgentState:
+    """Node: Stop workflow when LLM is rate limited."""
+    logger.warning("[Agent] Workflow stopped due to LLM rate limit/resource exhaustion")
+
+    return {
+        **state,
+        "answer": "El servicio de IA está ocupado (429). Intenta de nuevo en unos segundos.",
+        "sources": [],
+        "contexts": [],
+        "steps": state.get("steps", []) + ["Rate limited"],
+    }
+
+
 def classify_intent_node(state: AgentState) -> AgentState:
     """Node: Classify user intent"""
     logger.info("[Agent] Classifying intent...")
@@ -314,6 +327,8 @@ def route_by_intent(state: AgentState) -> str:
     """Conditional edge: Route based on intent"""
     intent = state.get("intent", "unclear")
 
+    if intent == "rate_limited":
+        return "rate_limited"
     if intent == "metadata_query":
         return "metadata_query"
     elif intent in ["specific_party", "party_general_plan"]:
@@ -331,6 +346,7 @@ def build_agent_graph():
 
     # Add nodes
     workflow.add_node("classify_intent", classify_intent_node)
+    workflow.add_node("rate_limited", rate_limited_node)
     workflow.add_node("extract_parties", extract_parties_node)
     workflow.add_node("metadata_query", metadata_query_node)
     workflow.add_node("rag_search", rag_search_node)
@@ -344,6 +360,7 @@ def build_agent_graph():
         "classify_intent",
         route_by_intent,
         {
+            "rate_limited": "rate_limited",
             "metadata_query": "metadata_query",
             "extract_parties": "extract_parties",
             "rag_search": "rag_search",
@@ -355,6 +372,7 @@ def build_agent_graph():
     workflow.add_edge("rag_search", "generate_response")
     workflow.add_edge("generate_response", END)
     workflow.add_edge("metadata_query", END)  # Metadata queries end directly
+    workflow.add_edge("rate_limited", END)
 
     # Compile
     return workflow.compile()
