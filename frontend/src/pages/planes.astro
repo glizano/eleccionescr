@@ -1,0 +1,263 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// Party metadata - official data from TSE
+const PARTIES = [
+  { abbreviation: "ACRM", name: "Aquí Costa Rica Manda", candidate: "Ronny Castillo González" },
+  { abbreviation: "CAC", name: "Coalición Agenda Ciudadana", candidate: "Claudia Dobles Camargo" },
+  { abbreviation: "CDS", name: "Centro Democrático y Social", candidate: "Ana Virginia Calzada" },
+  { abbreviation: "CR1", name: "Costa Rica Primero", candidate: "Douglas Caamaño Quirós" },
+  { abbreviation: "FA", name: "Frente Amplio", candidate: "Ariel Robles Barrantes" },
+  { abbreviation: "PA", name: "Partido Avanza", candidate: "Jose Aguilar Berrocal" },
+  { abbreviation: "PDLCT", name: "Partido de la Clase Trabajadora", candidate: "David Hernández Brenes" },
+  { abbreviation: "PEL", name: "Partido Esperanza y Libertad", candidate: "Marco Rodríguez Badilla" },
+  { abbreviation: "PEN", name: "Partido Esperanza Nacional", candidate: "Claudio Alpízar Otoya" },
+  { abbreviation: "PIN", name: "Partido Integración Nacional", candidate: "Luis Amador Jiménez" },
+  { abbreviation: "PJSC", name: "Partido Justicia Social Costarricense", candidate: "Walter Rubén Hernández Juárez" },
+  { abbreviation: "PLN", name: "Partido Liberación Nacional", candidate: "Álvaro Ramos Chaves" },
+  { abbreviation: "PLP", name: "Partido Liberal Progresista", candidate: "Eliecer Feinzaig Mintz" },
+  { abbreviation: "PNG", name: "Partido Nueva Generación", candidate: "Fernando Zamora Castellanos" },
+  { abbreviation: "PNR", name: "Partido Nueva República", candidate: "Fabricio Alvarado Muñoz" },
+  { abbreviation: "PPSO", name: "Partido Pueblo Soberano", candidate: "Laura Fernández Delgado" },
+  { abbreviation: "PSD", name: "Partido Progreso Social Democrático", candidate: "Luz Mary Alpízar Loaiza" },
+  { abbreviation: "PUCD", name: "Partido Unión Costarricense Democrática", candidate: "Boris Molina Acevedo" },
+  { abbreviation: "PUSC", name: "Partido Unidad Social Cristiana", candidate: "Juan Carlos Hidalgo Bogantes" },
+  { abbreviation: "UP", name: "Unidos Podemos", candidate: "Natalia Díaz Quintana" },
+];
+---
+
+<Layout title="Planes de Gobierno - Elecciones CR 2026">
+  <div class="planes-container">
+    <header class="planes-header">
+      <a href="/" class="back-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Volver al chat
+      </a>
+      <h1>Planes de Gobierno 2026</h1>
+      <p class="subtitle">Descarga los planes de gobierno oficiales de cada partido político</p>
+    </header>
+
+    <div class="parties-grid">
+      {PARTIES.map((party) => (
+        <div class="party-card">
+          <div class="party-info">
+            <h3 class="party-name">{party.name}</h3>
+            <p class="party-abbr">{party.abbreviation}</p>
+            <p class="party-candidate">{party.candidate}</p>
+          </div>
+          
+          <div class="party-actions">
+            <a 
+              href="https://www.tse.go.cr/2026/planesgobierno.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-primary"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Ver PDF oficial
+            </a>
+            
+            <a 
+              href={`https://github.com/glizano/eleccionescr/blob/main/ingest/data/raw/${party.abbreviation}.pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-secondary"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+              </svg>
+              Ver en GitHub
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div class="info-note">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      </svg>
+      <p>Los planes de gobierno son documentos oficiales presentados por cada partido al Tribunal Supremo de Elecciones (TSE) de Costa Rica.</p>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .planes-container {
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    padding: 2rem 1.5rem;
+  }
+
+  .planes-header {
+    max-width: 1200px;
+    margin: 0 auto 3rem;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover {
+    color: var(--color-primary);
+  }
+
+  .planes-header h1 {
+    color: var(--text-primary);
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .parties-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .party-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+
+  .party-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .party-info {
+    flex: 1;
+  }
+
+  .party-name {
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+  }
+
+  .party-abbr {
+    color: var(--color-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 0 0 0.75rem;
+  }
+
+  .party-candidate {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .party-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    flex: 1;
+    justify-content: center;
+    min-width: 130px;
+  }
+
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-primary-hover);
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--bg-tertiary);
+  }
+
+  .info-note {
+    max-width: 1200px;
+    margin: 3rem auto 0;
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: #f0f7ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 12px;
+  }
+
+  .info-note svg {
+    flex-shrink: 0;
+    color: #0066cc;
+  }
+
+  .info-note p {
+    color: #003d7a;
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .planes-header h1 {
+      font-size: 2rem;
+    }
+
+    .parties-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .party-actions {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+    }
+  }
+</style>
