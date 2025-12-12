@@ -272,7 +272,10 @@ def run_agent(
     with langfuse_trace(
         name="agent-workflow",
         session_id=session_id,
-        metadata={"question_length": len(question), "has_history": conversation_history is not None},
+        metadata={
+            "question_length": len(question),
+            "has_history": conversation_history is not None,
+        },
     ) as trace:
         initial_state = {
             "question": question,

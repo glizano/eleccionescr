@@ -134,10 +134,10 @@ async def ask(ask_request: AskRequest, request: Request):
 @app.get("/api/parties")
 @limiter.limit(f"{settings.max_requests_per_minute}/minute")
 async def list_parties(request: Request):
-    """List known political parties"""
-    from app.agents.classifier import KNOWN_PARTIES
+    """List known political parties with metadata"""
+    from app.party_metadata import PARTIES_METADATA
 
-    return {"parties": KNOWN_PARTIES}
+    return {"parties": PARTIES_METADATA}
 
 
 @app.get("/api/config")

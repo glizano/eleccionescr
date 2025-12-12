@@ -3,6 +3,9 @@ from typing import Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
+from app.party_metadata import (
+    PARTIES_METADATA,
+)
 from app.services.llm import get_llm
 
 logger = logging.getLogger(__name__)
@@ -68,7 +71,7 @@ def classify_intent(question: str, conversation_history: str | None = None) -> s
     context_note = ""
     if conversation_history:
         context_note = f"\n\nCONTEXTO DE LA CONVERSACIÓN PREVIA:\n{conversation_history}\n"
-    
+
     prompt = f"""Eres un clasificador de intenciones para preguntas sobre planes de gobierno.{context_note}
 
 Clasifica la pregunta en una de estas categorías:
@@ -111,42 +114,61 @@ Pregunta actual: {question}"""
 
 def extract_parties(question: str) -> list[str]:
     """
-    Extract party names from question
+    Extract party names from question using LLM with complete metadata.
+
+    The LLM receives full party information (abbreviations, full names, and candidates)
+    to accurately identify parties mentioned by any reference method.
 
     Returns: List of party abbreviations (e.g., ["PLN", "PUSC"])
     """
-    parties_str = ", ".join(KNOWN_PARTIES)
+    # Build complete metadata for LLM context
+    parties_info = "\n".join(
+        [
+            f"- {p['abbreviation']}: {p['name']} (Candidato: {p['candidate']})"
+            for p in PARTIES_METADATA
+        ]
+    )
 
-    prompt = f"""Extrae los nombres de partidos políticos mencionados en la pregunta.
+    prompt = f"""Extrae los partidos políticos mencionados en la pregunta.
 
-Partidos conocidos: {parties_str}
+PARTIDOS DE COSTA RICA 2026:
+{parties_info}
 
-Reglas:
+REGLAS:
 - Devuelve las siglas de los partidos mencionados como lista
-- Si no se menciona ningún partido, devuelve lista vacía
-- Usa las siglas exactas de la lista
-- Solo incluye partidos que estén en la lista de partidos conocidos
+- Si no se menciona ningún partido, devuelve lista vacía []
+- Identifica partidos mencionados por:
+  • Siglas (PLN, PUSC, FA, etc.)
+  • Nombre completo ("Liberación Nacional", "Frente Amplio")
+  • Nombre del candidato ("Fabricio Alvarado", "Claudia Dobles")
+  • Apellido del candidato ("Alvarado", "Feinzaig")
+- Usa SIEMPRE las siglas exactas de la lista
+- Solo incluye partidos que estén en la lista de arriba
 
-Ejemplos:
+EJEMPLOS:
 - "¿Qué propone el PLN?" → ["PLN"]
-- "Compara PLN y PUSC" → ["PLN", "PUSC"]
-- "¿Qué dicen sobre educación?" → []
-- "El Partido Liberación Nacional propone..." → ["PLN"]
-- "¿Cuál es el plan del FA?" → ["FA"]
-- "Compara PEN, PEL y PJSC" → ["PEN", "PEL", "PJSC"]
-- "¿Qué dice Esperanza Nacional sobre salud?" → ["PEN"]
+- "¿Fabricio Alvarado qué dice?" → ["PNR"]
+- "Compara Liberación Nacional con el PUSC" → ["PLN", "PUSC"]
+- "¿Claudia Dobles tiene propuestas?" → ["CAC"]
+- "¿Qué dice Feinzaig sobre economía?" → ["PLP"]
+- "Compara todos los partidos" → []
+- "¿Propuestas sobre educación?" → []
 
-Pregunta: {question}"""
+PREGUNTA: {question}"""
 
     try:
         llm = get_llm()
         structured_llm = llm.with_structured_output(PartyExtraction)
         result = structured_llm.invoke(prompt)
 
-        # Filter to only known parties (extra safety)
+        # Filter to only known parties (safety check)
         valid_parties = [p for p in result.parties if p in KNOWN_PARTIES]
 
-        logger.info(f"Extracted parties: {valid_parties}")
+        if valid_parties:
+            logger.info(f"Extracted parties: {valid_parties}")
+        else:
+            logger.info("No parties detected in question")
+
         return valid_parties
 
     except Exception as e:
