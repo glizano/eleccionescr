@@ -1,8 +1,16 @@
 #!/bin/bash
 # Script para ejecutar checks de CI localmente antes de hacer push
-# Uso: ./scripts/ci-check.sh
+# Uso: ./scripts/ci-check.sh [--fix]
+#   --fix: Auto-fix linting and formatting issues when possible
 
 set -e  # Exit on error
+
+# Parse arguments
+FIX_MODE=false
+if [[ "$1" == "--fix" ]]; then
+    FIX_MODE=true
+    echo "🔧 Running in FIX mode - will auto-fix issues when possible"
+fi
 
 echo "🔍 Running CI checks locally..."
 echo ""
@@ -28,7 +36,11 @@ print_status() {
 
 # 1. Ruff linting
 echo -e "${YELLOW}📝 Running ruff linter...${NC}"
-uv run ruff check .
+if [ "$FIX_MODE" = true ]; then
+    uv run ruff check --fix .
+else
+    uv run ruff check .
+fi
 print_status "Linting"
 
 # 2. Ruff formatting (apply)

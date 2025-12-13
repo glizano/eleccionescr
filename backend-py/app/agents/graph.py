@@ -333,3 +333,112 @@ def run_agent(
     logger.info(f"[Agent] Workflow completed. Steps: {final_state['steps']}")
 
     return final_state
+
+
+async def run_agent_stream(
+    question: str, session_id: str | None = None, conversation_history: str | None = None
+):
+    """
+    Run agent workflow with streaming response.
+
+    Yields chunks as they're generated:
+    - {"type": "token", "content": "..."} for each text token
+    - {"type": "metadata", "data": {...}} for sources and trace at the end
+    """
+    with langfuse_trace(
+        name="agent_workflow_stream",
+        session_id=session_id,
+        input={"question": question, "has_history": conversation_history is not None},
+    ) as trace:
+        # First, run the full workflow to get context and sources
+        initial_state = {
+            "question": question,
+            "intent": "",
+            "parties": [],
+            "contexts": [],
+            "answer": "",
+            "sources": [],
+            "steps": [],
+            "langfuse_trace": trace,
+            "conversation_history": conversation_history,
+        }
+
+        # Run through classification and retrieval
+        logger.info("[Agent Stream] Starting workflow...")
+
+        # Classify intent
+        state = classify_intent_node(initial_state)
+
+        # Route based on intent and extract parties if needed
+        intent = state["intent"]
+        if intent in ["specific_party", "party_general_plan"]:
+            state = extract_parties_node(state)
+
+        # Execute RAG search
+        state = rag_search_node(state)
+
+        # Now stream the answer generation
+        logger.info("[Agent Stream] Streaming answer generation...")
+
+        # Use streaming LLM
+        from app.services.llm import generate_text_stream
+
+        prompt = build_rag_response_prompt(
+            state["question"], state["contexts"], state.get("conversation_history")
+        )
+
+        full_answer = ""
+        async for token in generate_text_stream(prompt):
+            full_answer += token
+            yield {"type": "token", "content": token}
+
+        # Build sources from contexts (Qdrant ScoredPoint objects)
+        sources = []
+        for ctx in state["contexts"]:
+            sources.append(
+                {
+                    "partido": ctx.payload.get("partido", "Unknown"),
+                    "filename": ctx.payload.get("filename", ""),
+                    "text": ctx.payload.get("text", "")[:200] + "...",
+                    "doc_id": ctx.payload.get("doc_id", ""),
+                    "chunk_index": ctx.payload.get("chunk_index", 0),
+                    "score": ctx.score,
+                }
+            )
+
+        # Update state with final answer
+        state["answer"] = full_answer
+        state["sources"] = sources
+        state["steps"].append("Generated streaming answer")
+
+        # Update Langfuse trace
+        if trace:
+            try:
+                trace.update(
+                    output={
+                        "answer_length": len(full_answer),
+                        "sources_count": len(sources),
+                        "intent": state["intent"],
+                        "parties_detected": state["parties"],
+                        "steps": state["steps"],
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Failed to update Langfuse trace: {e}")
+
+        # Send metadata at the end
+        yield {
+            "type": "metadata",
+            "data": {
+                "sources": sources,
+                "agent_trace": {
+                    "intent": state["intent"],
+                    "parties_detected": state["parties"],
+                    "chunks_retrieved": len(state["contexts"]),
+                    "steps": state["steps"],
+                },
+                "session_id": session_id,
+            },
+        }
+
+        logger.info(f"[Agent Stream] Workflow completed. Steps: {state['steps']}")

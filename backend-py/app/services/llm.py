@@ -109,3 +109,33 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
 
         logger.error("[LLM] Error generating text", exc_info=True)
         return f"Error al generar respuesta: {str(e)}"
+
+
+async def generate_text_stream(prompt: str, langfuse_trace: Any = None):
+    """
+    Generate text using streaming (yields tokens as they're generated).
+
+    Args:
+        prompt: The input prompt
+        langfuse_trace: Optional Langfuse trace
+
+    Yields:
+        Text tokens as they're generated
+    """
+    llm = get_llm()
+    model_name = getattr(llm, "model_name", type(llm).__name__)
+    logger.info(f"[LLM Stream] Using model: {model_name}")
+
+    try:
+        # Stream tokens from LLM
+        async for chunk in llm.astream(prompt):
+            if hasattr(chunk, "content") and chunk.content:
+                yield chunk.content
+
+    except Exception as e:
+        if is_resource_exhausted_error(e):
+            logger.warning("[LLM Stream] Rate limited", exc_info=True)
+            yield "\\n\\n[El servicio está ocupado, intenta de nuevo en unos segundos]"
+        else:
+            logger.error("[LLM Stream] Error", exc_info=True)
+            yield f"\\n\\n[Error: {str(e)}]"

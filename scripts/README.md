@@ -9,8 +9,13 @@ Este directorio contiene scripts de integración continua y verificación de có
 Script principal que ejecuta todas las verificaciones de calidad del proyecto.
 
 ```bash
-./scripts/ci-check.sh
+./scripts/ci-check.sh           # Solo verifica problemas
+./scripts/ci-check.sh --fix     # Auto-arregla problemas cuando sea posible
 ```
+
+**Parámetros:**
+- Sin parámetros: Verifica código sin modificar archivos
+- `--fix`: Auto-arregla problemas de linting y formato
 
 Este script:
 - 🐍 Ejecuta las verificaciones del backend (Python)
@@ -21,6 +26,7 @@ Este script:
 - Antes de hacer `git push`
 - Antes de crear un Pull Request
 - Para verificar que todo está en orden localmente
+- Con `--fix` cuando quieras arreglar problemas automáticamente
 
 ---
 
@@ -40,7 +46,8 @@ Este script:
 
 **Ejecutar solo backend:**
 ```bash
-cd backend-py && ./scripts/ci-check.sh
+cd backend-py && ./scripts/ci-check.sh           # Solo verifica
+cd backend-py && ./scripts/ci-check.sh --fix     # Auto-arregla
 ```
 
 ### Frontend Astro (`frontend/scripts/ci-check.sh`)
@@ -53,7 +60,8 @@ cd backend-py && ./scripts/ci-check.sh
 
 **Ejecutar solo frontend:**
 ```bash
-cd frontend && ./scripts/ci-check.sh
+cd frontend && ./scripts/ci-check.sh           # Solo verifica
+cd frontend && ./scripts/ci-check.sh --fix     # Auto-arregla
 ```
 
 ---
@@ -125,6 +133,16 @@ git add .
 git commit -m "feat: nueva funcionalidad"  # ← Pre-commit hooks se ejecutan aquí
 ./scripts/ci-check.sh                       # ← Verificación completa manual
 git push                                     # ← GitHub Actions se ejecuta aquí
+```
+
+**Workflow con auto-fix:**
+```bash
+# Si el ci-check falla
+./scripts/ci-check.sh --fix                 # ← Auto-arregla problemas
+git add -A                                   # ← Stagea los cambios
+git commit --amend --no-edit                 # ← Actualiza el commit
+./scripts/ci-check.sh                        # ← Verifica de nuevo
+git push
 ```
 
 ---

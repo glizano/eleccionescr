@@ -1,8 +1,16 @@
 #!/bin/bash
 # Frontend CI check script - run before pushing
-# Usage: ./scripts/ci-check.sh
+# Usage: ./scripts/ci-check.sh [--fix]
+#   --fix: Auto-fix linting and formatting issues when possible
 
 set -e
+
+# Parse arguments
+FIX_MODE=false
+if [[ "$1" == "--fix" ]]; then
+    FIX_MODE=true
+    echo "🔧 Running in FIX mode - will auto-fix issues when possible"
+fi
 
 echo "🎨 Running Frontend CI checks locally..."
 echo ""
@@ -34,13 +42,22 @@ fi
 
 # Run linting
 echo "🔍 Running ESLint..."
-npm run lint
+if [ "$FIX_MODE" = true ]; then
+    npm run lint:fix
+else
+    npm run lint
+fi
 print_status "Linting passed"
 echo ""
 
 # Run Prettier check
 echo "💅 Running Prettier check..."
-npm run format:check
+if [ "$FIX_MODE" = true ]; then
+    npm run format
+    echo "Formatting applied"
+else
+    npm run format:check
+fi
 print_status "Formatting check passed"
 echo ""
 

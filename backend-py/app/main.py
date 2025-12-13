@@ -1,8 +1,10 @@
+import json
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -150,3 +152,59 @@ async def get_config():
             "per_day": settings.max_requests_per_day,
         }
     }
+
+
+@app.post("/api/ask/stream")
+@limiter.limit(f"{settings.max_requests_per_minute}/minute")
+@limiter.limit(f"{settings.max_requests_per_hour}/hour")
+@limiter.limit(f"{settings.max_requests_per_day}/day")
+async def ask_stream(ask_request: AskRequest, request: Request):
+    """
+    Streaming RAG endpoint - returns answer progressively via Server-Sent Events
+
+    Same rate limits as /api/ask endpoint.
+    """
+
+    async def generate_stream():
+        try:
+            logger.info(f"[API Stream] Question received: {ask_request.question[:100]}...")
+
+            # Build conversation history
+            conversation_history = None
+            if ask_request.last_messages:
+                recent_messages = ask_request.last_messages[-4:]
+                history_parts = []
+                for msg in recent_messages:
+                    role = "Usuario" if msg.role == "user" else "Asistente"
+                    history_parts.append(f"{role}: {msg.content[:200]}")
+                conversation_history = "\n".join(history_parts)
+                logger.info(
+                    f"[API Stream] Using conversation history with {len(recent_messages)} messages"
+                )
+
+            # Send initial metadata event
+            yield f"data: {json.dumps({'type': 'start', 'session_id': ask_request.session_id})}\n\n"
+
+            # Run agent workflow with streaming
+            from app.agents.graph import run_agent_stream
+
+            async for chunk in run_agent_stream(
+                ask_request.question,
+                session_id=ask_request.session_id,
+                conversation_history=conversation_history,
+            ):
+                if chunk["type"] == "token":
+                    # Stream text tokens
+                    yield f"data: {json.dumps({'type': 'token', 'content': chunk['content']})}\n\n"
+                elif chunk["type"] == "metadata":
+                    # Send sources and trace at the end
+                    yield f"data: {json.dumps({'type': 'metadata', **chunk['data']})}\n\n"
+
+            # Send done event
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+        except Exception as e:
+            logger.error(f"[API Stream] Error: {str(e)}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(generate_stream(), media_type="text/event-stream")

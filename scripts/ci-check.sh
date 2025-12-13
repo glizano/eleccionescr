@@ -1,8 +1,17 @@
 #!/bin/bash
 # Master CI check script - runs all project checks
-# Usage: ./scripts/ci-check.sh
+# Usage: ./scripts/ci-check.sh [--fix]
+#   --fix: Auto-fix issues when possible (passed to all sub-checks)
 
 set -e
+
+# Parse arguments
+FIX_FLAG=""
+if [[ "$1" == "--fix" ]]; then
+    FIX_FLAG="--fix"
+    echo "🔧 Running in FIX mode - will auto-fix issues when possible"
+    echo ""
+fi
 
 # Colors
 GREEN='\033[0;32m'
@@ -25,7 +34,7 @@ echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 if [ -f "backend-py/scripts/ci-check.sh" ]; then
-    if bash backend-py/scripts/ci-check.sh; then
+    if bash backend-py/scripts/ci-check.sh $FIX_FLAG; then
         echo -e "\n${GREEN}✅ Backend checks passed${NC}\n"
     else
         echo -e "\n${RED}❌ Backend checks failed${NC}\n"
@@ -43,7 +52,7 @@ echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 if [ -f "frontend/scripts/ci-check.sh" ]; then
-    if bash frontend/scripts/ci-check.sh; then
+    if bash frontend/scripts/ci-check.sh $FIX_FLAG; then
         echo -e "\n${GREEN}✅ Frontend checks passed${NC}\n"
     else
         echo -e "\n${RED}❌ Frontend checks failed${NC}\n"

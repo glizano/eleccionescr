@@ -100,25 +100,25 @@
     if (sendBtn) sendBtn.disabled = true;
     isLoading = true;
 
-    // 2. Add Loading Indicator
-    const loadingId = addLoadingIndicator();
+    // 2. Remove loading indicator and add streaming message container
+    const streamingMsgId = addStreamingMessage();
 
     try {
-      // 3. Call API with conversation history for context
-      const response = await fetch(`${BACKEND_URL}/api/ask`, {
+      // 3. Call streaming API with EventSource
+      const response = await fetch(`${BACKEND_URL}/api/ask/stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           question,
-          last_messages: conversationHistory.slice(-4), // Send last 4 messages (2 Q&A pairs)
+          last_messages: conversationHistory.slice(-4),
         }),
       });
 
       // Handle rate limit error (429)
       if (response.status === 429) {
-        removeMessage(loadingId);
+        removeMessage(streamingMsgId);
         const limitMsg = `⏱️ **Límite de peticiones alcanzado**\n\nHas superado el número máximo de consultas permitidas. Por favor, espera un momento antes de intentar nuevamente.\n\n_Límites: ${rateLimits.per_minute} por minuto, ${rateLimits.per_hour} por hora, ${rateLimits.per_day} por día._`;
         addMessage(limitMsg, "bot error");
         return;
@@ -126,23 +126,52 @@
 
       if (!response.ok) throw new Error("Error en la conexión");
 
-      const data = await response.json();
+      // 4. Stream response chunks
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedText = "";
+      let metadata: any = null;
 
-      // 4. Remove Loading & Add Bot Message
-      removeMessage(loadingId);
-      addBotMessage(data);
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-      // 5. Update conversation history for context
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.type === "token") {
+                accumulatedText += data.content;
+                updateStreamingMessage(streamingMsgId, accumulatedText);
+              } else if (data.type === "metadata") {
+                metadata = data.data;
+              } else if (data.type === "error") {
+                throw new Error(data.message);
+              }
+            }
+          }
+        }
+      }
+
+      // 5. Add sources and trace if metadata received
+      if (metadata) {
+        finalizeStreamingMessage(streamingMsgId, accumulatedText, metadata);
+      }
+
+      // 6. Update conversation history
       conversationHistory.push({ role: "user", content: question });
-      conversationHistory.push({ role: "assistant", content: data.answer });
+      conversationHistory.push({ role: "assistant", content: accumulatedText });
 
-      // Keep only last 10 messages (5 pairs) to avoid memory issues
       if (conversationHistory.length > 10) {
         conversationHistory = conversationHistory.slice(-10);
       }
     } catch (error) {
       console.error(error);
-      removeMessage(loadingId);
+      removeMessage(streamingMsgId);
       addMessage(
         "Lo siento, hubo un error al procesar tu pregunta. Por favor intenta de nuevo.",
         "bot error"
@@ -155,7 +184,10 @@
 
   function scrollToBottom() {
     if (messagesArea) {
-      messagesArea.scrollTop = messagesArea.scrollHeight;
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+      });
     }
   }
 
@@ -179,31 +211,58 @@
     scrollToBottom();
   }
 
-  function addBotMessage(data: any) {
-    if (!messagesArea) return;
+  function addStreamingMessage() {
+    if (!messagesArea) return "";
 
+    const id = "streaming-" + Date.now();
     const msgDiv = document.createElement("div");
-    msgDiv.className = "message bot";
+    msgDiv.className = "message bot streaming";
+    msgDiv.id = id;
 
-    // Main Answer
     const contentDiv = document.createElement("div");
-    contentDiv.className = "message-content";
-    contentDiv.innerHTML = marked.parse(data.answer) as string;
-    msgDiv.appendChild(contentDiv);
+    contentDiv.className = "message-content streaming-content";
+    contentDiv.id = `${id}-content`;
+    contentDiv.innerHTML = '<span class="cursor">▊</span>'; // Blinking cursor
 
-    // Sources (collapsible)
-    if (data.sources && data.sources.length > 0) {
+    msgDiv.appendChild(contentDiv);
+    messagesArea.appendChild(msgDiv);
+    scrollToBottom();
+    return id;
+  }
+
+  function updateStreamingMessage(id: string, text: string) {
+    const contentEl = document.getElementById(`${id}-content`);
+    if (contentEl) {
+      // Update with markdown parsing + cursor
+      contentEl.innerHTML = (marked.parse(text) as string) + '<span class="cursor">▊</span>';
+      scrollToBottom();
+    }
+  }
+
+  function finalizeStreamingMessage(id: string, text: string, metadata: any) {
+    const msgDiv = document.getElementById(id);
+    const contentEl = document.getElementById(`${id}-content`);
+
+    if (!msgDiv || !contentEl) return;
+
+    // Remove streaming class and cursor
+    msgDiv.classList.remove("streaming");
+    contentEl.classList.remove("streaming-content");
+    contentEl.innerHTML = marked.parse(text) as string;
+
+    // Add sources if available
+    if (metadata.sources && metadata.sources.length > 0) {
       const sourcesDetails = document.createElement("details");
       sourcesDetails.className = "sources-collapsible";
 
       const sourcesSummary = document.createElement("summary");
-      sourcesSummary.innerHTML = `📚 Ver fuentes (${data.sources.length})`;
+      sourcesSummary.innerHTML = `📚 Ver fuentes (${metadata.sources.length})`;
       sourcesDetails.appendChild(sourcesSummary);
 
       const sourcesContainer = document.createElement("div");
       sourcesContainer.className = "sources-content";
 
-      data.sources.forEach((source: any) => {
+      metadata.sources.forEach((source: any) => {
         const sourceCard = document.createElement("div");
         sourceCard.className = "source-card-mini";
         sourceCard.innerHTML = `
@@ -220,39 +279,30 @@
       msgDiv.appendChild(sourcesDetails);
     }
 
-    // Trace (Agent details)
-    if (data.agent_trace) {
-      const traceDiv = document.createElement("details");
-      traceDiv.className = "agent-trace-mini";
-      traceDiv.innerHTML = `
-            <summary>🧠 Proceso (${data.agent_trace.intent})</summary>
-            <div class="trace-details">
-                <div><strong>Pasos:</strong></div>
-                <ul>${data.agent_trace.steps.map((s: string) => `<li>${s}</li>`).join("")}</ul>
-            </div>
-        `;
-      msgDiv.appendChild(traceDiv);
+    // Add agent trace if available
+    if (metadata.agent_trace) {
+      const traceDetails = document.createElement("details");
+      traceDetails.className = "agent-trace-mini";
+
+      const traceSummary = document.createElement("summary");
+      traceSummary.textContent = "🤖 Ver detalles técnicos";
+      traceDetails.appendChild(traceSummary);
+
+      const traceContent = document.createElement("div");
+      traceContent.className = "trace-details";
+      traceContent.innerHTML = `
+        <ul>
+          <li><strong>Intención:</strong> ${metadata.agent_trace.intent}</li>
+          <li><strong>Partidos detectados:</strong> ${metadata.agent_trace.parties_detected.join(", ") || "Ninguno"}</li>
+          <li><strong>Chunks recuperados:</strong> ${metadata.agent_trace.chunks_retrieved}</li>
+          <li><strong>Pasos:</strong> ${metadata.agent_trace.steps.join(" → ")}</li>
+        </ul>
+      `;
+      traceDetails.appendChild(traceContent);
+      msgDiv.appendChild(traceDetails);
     }
 
-    messagesArea.appendChild(msgDiv);
     scrollToBottom();
-  }
-
-  function addLoadingIndicator() {
-    if (!messagesArea) return "";
-
-    const id = "loading-" + Date.now();
-    const msgDiv = document.createElement("div");
-    msgDiv.className = "message bot loading";
-    msgDiv.id = id;
-    msgDiv.innerHTML = `
-      <div class="typing-indicator">
-        <span></span><span></span><span></span>
-      </div>
-    `;
-    messagesArea.appendChild(msgDiv);
-    scrollToBottom();
-    return id;
   }
 
   function removeMessage(id: string) {
@@ -276,6 +326,7 @@
 
   .messages-area {
     flex: 1;
+    min-height: 0; /* Important: allows flex child to shrink and enable overflow */
     overflow-y: auto;
     padding: var(--spacing-md);
     display: flex;
@@ -600,5 +651,25 @@
     40% {
       transform: scale(1);
     }
+  }
+
+  /* Streaming cursor */
+  .streaming-content .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 18px;
+    background: var(--accent-color);
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .message.streaming {
+    opacity: 1;
   }
 </style>
