@@ -55,8 +55,6 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
-  height: 100vh;
-  overflow: hidden; /* Prevent body scroll, handle in chat container */
 }
 
 /* Utilities */
