@@ -61,7 +61,7 @@ repos:
     rev: 1.7.10
     hooks:
       - id: bandit
-        args: ['--skip', 'B110']
+        args: ['--skip', 'B110,B104']  # B110: try-except-pass, B104: bind 0.0.0.0
         files: ^(backend-py|ingest)/.*\.py$
         additional_dependencies: ['bandit[toml]']
         exclude: ^.*/tests/.*\.py$

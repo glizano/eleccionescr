@@ -41,7 +41,8 @@ print_status "Formatting"
 echo ""
 echo -e "${YELLOW}🔒 Running security checks (bandit)...${NC}"
 uv pip install bandit[toml]
-uv run bandit --skip B110 -r app/ || echo "⚠️  Bandit warnings (non-blocking)"
+# Skip B110 (try-except-pass in retry logic) and B104 (bind to 0.0.0.0 for Docker)
+uv run bandit --skip B110,B104 -r app/ || echo "⚠️  Bandit warnings (non-blocking)"
 
 # 4. Run tests
 echo ""
