@@ -156,7 +156,7 @@
                   accumulatedText += data.content;
                   updateStreamingMessage(streamingMsgId, accumulatedText);
                 } else if (data.type === "metadata") {
-                  // Backend unpacks chunk['data'] with **, so sources/agent_trace are directly on data
+                  // Backend (main.py:201) uses **chunk['data'], spreading metadata fields directly onto data object
                   metadata = {
                     sources: data.sources || [],
                     agent_trace: data.agent_trace || null,
