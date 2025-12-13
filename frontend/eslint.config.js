@@ -23,6 +23,18 @@ export default [
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
   },
+  // Ignore auto-generated files
+  {
+    ignores: [
+      ".astro/**",
+      "dist/**",
+      "node_modules/**",
+      ".env*",
+      "pnpm-lock.yaml",
+      "package-lock.json",
+      "yarn.lock",
+    ],
+  },
   // Astro files
   ...eslintPluginAstro.configs.recommended,
   {

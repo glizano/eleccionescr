@@ -78,9 +78,9 @@ def test_rate_limiting_per_minute(client):
     rate_limited_count = sum(1 for r in responses if r.status_code == 429)
 
     # Should have some rate limited responses
-    assert (
-        rate_limited_count > 0
-    ), f"Expected rate limiting, got {success_count} successes, {rate_limited_count} rate limited"
+    assert rate_limited_count > 0, (
+        f"Expected rate limiting, got {success_count} successes, {rate_limited_count} rate limited"
+    )
     assert success_count > 0, "Should have some successful requests"
 
 

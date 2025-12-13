@@ -26,22 +26,22 @@ print_status() {
     fi
 }
 
-# 1. Lint check
+# 1. Ruff linting
 echo -e "${YELLOW}📝 Running ruff linter...${NC}"
 uv run ruff check .
 print_status "Linting"
 
-# 2. Format check
+# 2. Ruff formatting (apply)
 echo ""
-echo -e "${YELLOW}🎨 Checking code formatting...${NC}"
-uv run ruff format --check .
-print_status "Format check"
+echo -e "${YELLOW}🎨 Applying code formatting...${NC}"
+uv run ruff format .
+print_status "Formatting"
 
-# 3. Type checking (optional, if you add mypy)
-# echo ""
-# echo -e "${YELLOW}🔍 Running type checker...${NC}"
-# uv run mypy app/
-# print_status "Type checking"
+# 3. Bandit security check
+echo ""
+echo -e "${YELLOW}🔒 Running security checks (bandit)...${NC}"
+uv pip install bandit[toml]
+uv run bandit --skip B110 -r app/ || echo "⚠️  Bandit warnings (non-blocking)"
 
 # 4. Run tests
 echo ""

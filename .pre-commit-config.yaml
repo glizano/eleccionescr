@@ -23,15 +23,21 @@ repos:
       - id: mixed-line-ending
         args: ['--fix=lf']
 
-  # Python - Ruff (linting and formatting)
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+  # Python - Ruff (linting and formatting) - Run from backend-py directory
+  - repo: local
     hooks:
-      - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
-        files: ^backend-py/.*\.py$|^ingest/.*\.py$
-      - id: ruff-format
-        files: ^backend-py/.*\.py$|^ingest/.*\.py$
+      - id: ruff-backend
+        name: Ruff linting (backend)
+        entry: bash -c 'cd backend-py && uv run ruff check --fix --exit-non-zero-on-fix .'
+        language: system
+        files: ^backend-py/.*\.py$
+        pass_filenames: false
+      - id: ruff-format-backend
+        name: Ruff format (backend)
+        entry: bash -c 'cd backend-py && uv run ruff format .'
+        language: system
+        files: ^backend-py/.*\.py$
+        pass_filenames: false
 
   # JavaScript/TypeScript - Local hooks (run in frontend directory)
   - repo: local

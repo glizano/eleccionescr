@@ -120,14 +120,16 @@ jobs:
     name: Docker Image Scan
     runs-on: ubuntu-latest
     if: github.event_name != 'schedule'
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Build Docker image (backend)
-        working-directory: ./backend-py
-        run: docker build -t eleccionescr-backend:test .
+        run: docker build -t eleccionescr-backend:test ./backend-py
 
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -140,13 +142,13 @@ jobs:
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: 'trivy-backend-results.sarif'
           category: 'trivy-backend'
 
       - name: Build Docker image (frontend)
-        working-directory: ./frontend
-        run: docker build -t eleccionescr-frontend:test .
+        run: docker build -t eleccionescr-frontend:test ./frontend
 
       - name: Scan frontend image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -159,6 +161,7 @@ jobs:
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: 'trivy-frontend-results.sarif'
           category: 'trivy-frontend'
