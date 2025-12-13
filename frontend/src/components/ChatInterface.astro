@@ -158,9 +158,9 @@
                 } else if (data.type === "metadata") {
                   // Backend unpacks chunk['data'] with **, so sources/agent_trace are directly on data
                   metadata = {
-                    sources: data.sources,
-                    agent_trace: data.agent_trace,
-                    session_id: data.session_id,
+                    sources: data.sources || [],
+                    agent_trace: data.agent_trace || null,
+                    session_id: data.session_id || null,
                   };
                 } else if (data.type === "done") {
                   // Streaming completed - will finalize after loop
