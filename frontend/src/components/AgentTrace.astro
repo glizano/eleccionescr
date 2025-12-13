@@ -24,9 +24,7 @@ const { intent, steps, chunks_retrieved } = Astro.props;
     <div class="trace-steps">
       <span class="label">Pasos ejecutados:</span>
       <ul>
-        {steps.map((step) => (
-          <li>{step}</li>
-        ))}
+        {steps.map((step) => <li>{step}</li>)}
       </ul>
     </div>
   </div>

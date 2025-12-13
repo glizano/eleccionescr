@@ -1,56 +1,34 @@
-export default {
-  extends: ["eslint:recommended", "plugin:astro/recommended"],
-  env: {
-    node: true,
-    es2022: true,
-    browser: true,
-  },
-  parserOptions: {
-    ecmaVersion: "latest",
-    sourceType: "module",
-  },
-  overrides: [
-    {
-      files: ["*.astro"],
-      parser: "astro-eslint-parser",
-      parserOptions: {
-        parser: "@typescript-eslint/parser",
-        extraFileExtensions: [".astro"],
-      },
-      rules: {
-        // Astro-specific rules
-        "astro/no-set-html-directive": "error",
+import eslintPluginAstro from "eslint-plugin-astro";
+
+export default [
+  // Base config for all files
+  {
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        // Node.js globals
+        process: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        // Browser globals
+        window: "readonly",
+        document: "readonly",
+        navigator: "readonly",
+        console: "readonly",
       },
     },
-    {
-      files: ["**/*.astro/*.js", "*.astro/*.js"],
-      env: {
-        browser: true,
-        es2020: true,
-      },
-      parserOptions: {
-        sourceType: "module",
-      },
-      rules: {
-        "prettier/prettier": "off",
-      },
+    rules: {
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
-    {
-      files: ["*.ts", "*.tsx"],
-      parser: "@typescript-eslint/parser",
-      extends: ["plugin:@typescript-eslint/recommended"],
-      rules: {
-        "@typescript-eslint/no-unused-vars": [
-          "error",
-          { argsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_" },
-        ],
-        "@typescript-eslint/no-non-null-assertion": "off",
-      },
-    },
-  ],
-  rules: {
-    // General rules
-    "no-console": ["warn", { allow: ["warn", "error"] }],
-    "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
   },
-};
+  // Astro files
+  ...eslintPluginAstro.configs.recommended,
+  {
+    files: ["**/*.astro"],
+    rules: {
+      "astro/no-set-html-directive": "error",
+    },
+  },
+];
