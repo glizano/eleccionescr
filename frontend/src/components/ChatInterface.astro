@@ -156,7 +156,12 @@
                   accumulatedText += data.content;
                   updateStreamingMessage(streamingMsgId, accumulatedText);
                 } else if (data.type === "metadata") {
-                  metadata = data.data;
+                  // Backend (main.py:201) uses **chunk['data'], spreading metadata fields directly onto data object
+                  metadata = {
+                    sources: data.sources || [],
+                    agent_trace: data.agent_trace || null,
+                    session_id: data.session_id || null,
+                  };
                 } else if (data.type === "done") {
                   // Streaming completed - will finalize after loop
                 } else if (data.type === "error") {
