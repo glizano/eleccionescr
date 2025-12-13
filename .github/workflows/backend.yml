@@ -14,8 +14,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Lint & Format Check
+  test:
+    name: Lint, Test & Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -37,65 +37,32 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-lint-${{ hashFiles('backend-py/pyproject.toml') }}
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend-py/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-uv-lint-
             ${{ runner.os }}-uv-
 
-      - name: Install dependencies
-        run: uv sync
+      - name: Install all dependencies once
+        run: uv sync --all-extras
 
-      - name: Install ruff
-        run: uv pip install ruff
-
-      - name: Run ruff linter
+      - name: Ruff linter
         run: uv run ruff check .
 
-      - name: Run ruff formatter check
+      - name: Ruff formatter check
         run: uv run ruff format --check .
 
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    needs: lint
-    defaults:
-      run:
-        working-directory: ./backend-py
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version-file: "backend-py/.python-version"
-
-      - name: Cache uv dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-test-${{ hashFiles('backend-py/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-test-
-            ${{ runner.os }}-uv-
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Install pytest
-        run: uv pip install pytest pytest-cov pytest-asyncio
-
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           if [ -d "tests" ]; then
             uv run pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=xml
           else
             echo "No tests directory found, skipping tests"
           fi
+
+      - name: Validate imports
+        run: uv run python -c "from app.main import app; print('✅ Imports successful')"
+
+      - name: Check dependencies
+        run: uv pip check
 
       - name: Upload coverage reports
         if: always() && hashFiles('backend-py/tests/**') != ''
@@ -105,41 +72,10 @@ jobs:
           flags: backend
           name: backend-coverage
 
-  build:
-    name: Build & Validate
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    defaults:
-      run:
-        working-directory: ./backend-py
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version-file: "backend-py/.python-version"
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Validate imports
-        run: |
-          uv run python -c "from app.main import app; print('✅ Imports successful')"
-
-      - name: Check pyproject.toml
-        run: |
-          uv pip check
-
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: build
+    needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     defaults:
       run:
