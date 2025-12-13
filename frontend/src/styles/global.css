@@ -6,6 +6,8 @@
   --text-secondary: #666666;
   --accent-color: #2563eb;
   --accent-hover: #1d4ed8;
+  --color-primary: #2563eb; /* Alias for accent-color for compatibility */
+  --color-primary-hover: #1d4ed8; /* Alias for accent-hover for compatibility */
   --border-color: #e5e7eb;
   --message-user-bg: #2563eb;
   --message-user-text: #ffffff;
@@ -36,6 +38,8 @@
     --text-secondary: #9ca3af;
     --accent-color: #3b82f6;
     --accent-hover: #60a5fa;
+    --color-primary: #3b82f6; /* Alias for accent-color for compatibility */
+    --color-primary-hover: #60a5fa; /* Alias for accent-hover for compatibility */
     --border-color: #374151;
     --message-user-bg: #3b82f6;
     --message-user-text: #ffffff;
@@ -55,8 +59,6 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
-  height: 100vh;
-  overflow: hidden; /* Prevent body scroll, handle in chat container */
 }
 
 /* Utilities */
@@ -90,6 +92,11 @@ body {
 
 .hidden {
   display: none;
+}
+
+/* Prevent body scroll when mobile sidebar is open */
+body.sidebar-open {
+  overflow: hidden;
 }
 
 /* Scrollbar */
