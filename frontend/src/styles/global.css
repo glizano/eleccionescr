@@ -90,6 +90,11 @@ body {
   display: none;
 }
 
+/* Prevent body scroll when mobile sidebar is open */
+body.sidebar-open {
+  overflow: hidden;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

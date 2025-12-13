@@ -114,28 +114,32 @@
   const sidebar = document.getElementById("sidebar");
   const overlay = document.getElementById("sidebar-overlay");
   const closeBtn = document.getElementById("close-sidebar-btn");
+  
+  // Use matchMedia for better performance and consistency
+  const MOBILE_BREAKPOINT = "(max-width: 1023px)";
+  const isMobile = window.matchMedia(MOBILE_BREAKPOINT);
 
   function openSidebar() {
     sidebar?.classList.add("open");
     overlay?.classList.add("active");
-    document.body.style.overflow = "hidden";
+    document.body.classList.add("sidebar-open");
   }
 
   function closeSidebar() {
     sidebar?.classList.remove("open");
     overlay?.classList.remove("active");
-    document.body.style.overflow = "";
+    document.body.classList.remove("sidebar-open");
   }
 
   hamburgerBtn?.addEventListener("click", openSidebar);
   closeBtn?.addEventListener("click", closeSidebar);
   overlay?.addEventListener("click", closeSidebar);
 
-  // Close sidebar on navigation link click (mobile)
+  // Close sidebar on navigation link click (mobile only)
   const navLinks = sidebar?.querySelectorAll(".nav-link");
   navLinks?.forEach((link) => {
     link.addEventListener("click", () => {
-      if (window.innerWidth < 1024) {
+      if (isMobile.matches) {
         closeSidebar();
       }
     });
