@@ -348,7 +348,7 @@ async def run_agent_stream(
     with langfuse_trace(
         name="agent_workflow_stream",
         session_id=session_id,
-        input={"question": question, "has_history": conversation_history is not None},
+        metadata={"question": question, "has_history": conversation_history is not None},
     ) as trace:
         # First, run the full workflow to get context and sources
         initial_state = {
