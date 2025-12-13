@@ -157,6 +157,8 @@
                   updateStreamingMessage(streamingMsgId, accumulatedText);
                 } else if (data.type === "metadata") {
                   metadata = data.data;
+                } else if (data.type === "done") {
+                  // Streaming completed - will finalize after loop
                 } else if (data.type === "error") {
                   throw new Error(data.message);
                 }
@@ -168,10 +170,8 @@
         }
       }
 
-      // 5. Add sources and trace if metadata received
-      if (metadata) {
-        finalizeStreamingMessage(streamingMsgId, accumulatedText, metadata);
-      }
+      // 5. Finalize the message (remove cursor and add metadata if available)
+      finalizeStreamingMessage(streamingMsgId, accumulatedText, metadata);
 
       // 6. Update conversation history
       conversationHistory.push({ role: "user", content: question });
@@ -262,7 +262,7 @@
     contentEl.innerHTML = marked.parse(text) as string;
 
     // Add sources if available
-    if (metadata.sources && metadata.sources.length > 0) {
+    if (metadata && metadata.sources && metadata.sources.length > 0) {
       const sourcesDetails = document.createElement("details");
       sourcesDetails.className = "sources-collapsible";
 
@@ -291,7 +291,7 @@
     }
 
     // Add agent trace if available
-    if (metadata.agent_trace) {
+    if (metadata && metadata.agent_trace) {
       const traceDetails = document.createElement("details");
       traceDetails.className = "agent-trace-mini";
 
