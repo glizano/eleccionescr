@@ -5,6 +5,12 @@ Tests for the checkpointer/conversational memory functionality.
 from unittest.mock import patch
 
 
+def _get_config_from_call(mock_graph):
+    """Helper to extract config from mock_graph.invoke call args"""
+    call_args = mock_graph.invoke.call_args
+    return call_args[1].get("config") or call_args[0][1]
+
+
 def test_checkpointer_with_session_id():
     """Test that run_agent uses session_id correctly for checkpointer"""
 
@@ -44,10 +50,7 @@ def test_checkpointer_with_session_id():
         assert result1["answer"] == "El PLN tiene un plan educativo sólido."
 
         # Verify that agent_graph.invoke was called with correct config
-        call_args = mock_graph.invoke.call_args
-        assert call_args is not None
-        # Check that config contains thread_id set to session_id
-        config = call_args[1].get("config") or call_args[0][1]
+        config = _get_config_from_call(mock_graph)
         assert config["configurable"]["thread_id"] == "test-session-123"
 
         # Second call with same session_id
@@ -55,8 +58,7 @@ def test_checkpointer_with_session_id():
 
         assert result2 is not None
         # Verify it uses the same thread_id
-        call_args = mock_graph.invoke.call_args
-        config = call_args[1].get("config") or call_args[0][1]
+        config = _get_config_from_call(mock_graph)
         assert config["configurable"]["thread_id"] == "test-session-123"
 
 
@@ -86,8 +88,7 @@ def test_checkpointer_without_session_id():
         assert result["answer"] == "Respuesta general sobre partidos."
 
         # Verify that thread_id defaults to "default"
-        call_args = mock_graph.invoke.call_args
-        config = call_args[1].get("config") or call_args[0][1]
+        config = _get_config_from_call(mock_graph)
         assert config["configurable"]["thread_id"] == "default"
 
 
@@ -115,8 +116,7 @@ def test_checkpointer_different_sessions():
         assert "answer" in result_a
 
         # Verify thread_id for session A
-        call_args = mock_graph.invoke.call_args
-        config = call_args[1].get("config") or call_args[0][1]
+        config = _get_config_from_call(mock_graph)
         assert config["configurable"]["thread_id"] == "session-a"
 
         # Call with session_id B (different session)
@@ -125,8 +125,7 @@ def test_checkpointer_different_sessions():
         assert "answer" in result_b
 
         # Verify thread_id for session B
-        call_args = mock_graph.invoke.call_args
-        config = call_args[1].get("config") or call_args[0][1]
+        config = _get_config_from_call(mock_graph)
         assert config["configurable"]["thread_id"] == "session-b"
 
         # Both should work independently with different thread_ids
