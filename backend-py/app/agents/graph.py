@@ -12,6 +12,7 @@ from app.agents.retrieval import (
     search_general_party_plan,
     search_specific_party,
 )
+from app.config import settings
 from app.party_metadata import CANDIDATE_TO_PARTY, PARTIES_METADATA, PARTY_NAME_TO_ABBR
 from app.services.langfuse_service import langfuse_trace
 from app.services.llm import generate_text
@@ -53,7 +54,7 @@ def classify_intent_node(state: AgentState) -> AgentState:
     from app.services.langfuse_service import langfuse_span
 
     trace = state.get("langfuse_trace")
-    
+
     with langfuse_span(
         trace,
         name="classify_intent",
@@ -79,7 +80,7 @@ def extract_parties_node(state: AgentState) -> AgentState:
     from app.services.langfuse_service import langfuse_span
 
     trace = state.get("langfuse_trace")
-    
+
     with langfuse_span(
         trace,
         name="extract_parties",
@@ -130,9 +131,7 @@ def rag_search_node(state: AgentState) -> AgentState:
 
         if span:
             try:
-                parties_in_contexts = list(
-                    {c.payload.get("partido", "Unknown") for c in contexts}
-                )
+                parties_in_contexts = list({c.payload.get("partido", "Unknown") for c in contexts})
                 span.end(
                     output={
                         "num_contexts": len(contexts),
@@ -159,7 +158,7 @@ def generate_response_node(state: AgentState) -> AgentState:
     from app.services.langfuse_service import langfuse_span
 
     trace = state.get("langfuse_trace")
-    
+
     with langfuse_span(
         trace,
         name="generate_response",
@@ -222,13 +221,13 @@ def generate_response_node(state: AgentState) -> AgentState:
 
         except Exception as e:
             logger.error(f"[Agent] Error generating response: {e}", exc_info=True)
-            
+
             if span:
                 try:
                     span.end(output={"error": str(e)}, level="ERROR")
                 except Exception:
                     pass
-            
+
             return {
                 **state,
                 "answer": f"Error al generar respuesta: {str(e)}",
@@ -420,7 +419,9 @@ def run_agent(
             "question_length": len(question),
             "has_history": conversation_history is not None,
             "llm_provider": settings.llm_provider,
-            "llm_model": settings.google_model if settings.llm_provider == "google" else settings.openai_model,
+            "llm_model": settings.google_model
+            if settings.llm_provider == "google"
+            else settings.openai_model,
         },
     ) as trace:
         initial_state = {
@@ -448,16 +449,16 @@ def run_agent(
                 tags = [
                     final_state.get("intent", "unknown"),
                 ]
-                
+
                 # Add party tags
                 for party in final_state.get("parties", []):
                     tags.append(f"party:{party}")
-                
+
                 # Add source count tag
                 sources_count = len(final_state.get("sources", []))
                 if sources_count > 0:
                     tags.append(f"sources:{sources_count}")
-                
+
                 trace.update(
                     output={
                         "answer_length": len(final_state.get("answer", "")),
@@ -509,7 +510,9 @@ async def run_agent_stream(
             "has_history": conversation_history is not None,
             "streaming": True,
             "llm_provider": settings.llm_provider,
-            "llm_model": settings.google_model if settings.llm_provider == "google" else settings.openai_model,
+            "llm_model": settings.google_model
+            if settings.llm_provider == "google"
+            else settings.openai_model,
         },
     ) as trace:
         # First, run the full workflow to get context and sources
@@ -581,15 +584,15 @@ async def run_agent_stream(
                     state.get("intent", "unknown"),
                     "streaming",
                 ]
-                
+
                 # Add party tags
                 for party in state.get("parties", []):
                     tags.append(f"party:{party}")
-                
+
                 # Add source count tag
                 if len(sources) > 0:
                     tags.append(f"sources:{len(sources)}")
-                
+
                 trace.update(
                     output={
                         "answer_length": len(full_answer),
@@ -620,7 +623,7 @@ async def run_agent_stream(
         }
 
         logger.info(f"[Agent Stream] Workflow completed. Steps: {state['steps']}")
-        
+
         # Add trace_id for feedback tracking
         if trace:
             try:

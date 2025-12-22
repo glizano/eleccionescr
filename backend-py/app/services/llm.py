@@ -84,7 +84,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
     generation = None
     if langfuse_trace:
         from app.services.langfuse_service import create_generation
-        
+
         generation = create_generation(
             trace=langfuse_trace,
             name="llm_generation",
@@ -98,7 +98,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
         )
 
     start_time = time.time()
-    
+
     try:
         # Use circuit breaker to prevent cascading failures
         circuit_breaker = get_llm_circuit_breaker()
@@ -112,7 +112,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
 
         latency_ms = int((time.time() - start_time) * 1000)
         logger.info(f"[LLM] Generated response ({len(response_text)} chars) in {latency_ms}ms")
-        
+
         # Update Langfuse generation with output and metrics
         if generation:
             try:
@@ -126,13 +126,15 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
                 )
             except Exception as e:
                 logger.warning(f"Failed to update Langfuse generation: {e}")
-        
+
         return response_text
 
     except CircuitBreakerOpenError as e:
         logger.error(f"[LLM] Circuit breaker open: {e}")
-        error_msg = "El servicio de IA está temporalmente no disponible. Intenta de nuevo en un minuto."
-        
+        error_msg = (
+            "El servicio de IA está temporalmente no disponible. Intenta de nuevo en un minuto."
+        )
+
         if generation:
             try:
                 generation.end(
@@ -142,13 +144,13 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
                 )
             except Exception:
                 pass
-        
+
         return error_msg
 
     except TimeoutError as e:
         logger.error(f"[LLM] Request timeout: {e}")
         error_msg = f"La solicitud tomó demasiado tiempo ({settings.llm_timeout_seconds}s). Intenta con una pregunta más corta."
-        
+
         if generation:
             try:
                 generation.end(
@@ -158,7 +160,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
                 )
             except Exception:
                 pass
-        
+
         return error_msg
 
     except Exception as e:
@@ -168,7 +170,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
         else:
             logger.error("[LLM] Error generating text", exc_info=True)
             error_msg = f"Error al generar respuesta: {str(e)}"
-        
+
         if generation:
             try:
                 generation.end(
@@ -178,7 +180,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
                 )
             except Exception:
                 pass
-        
+
         return error_msg
 
 
@@ -201,7 +203,7 @@ async def generate_text_stream(prompt: str, langfuse_trace: Any = None):
     generation = None
     if langfuse_trace:
         from app.services.langfuse_service import create_generation
-        
+
         generation = create_generation(
             trace=langfuse_trace,
             name="llm_generation_stream",
@@ -215,7 +217,7 @@ async def generate_text_stream(prompt: str, langfuse_trace: Any = None):
 
     start_time = time.time()
     full_response = ""
-    
+
     try:
         # Stream tokens from LLM
         async for chunk in llm.astream(prompt):
@@ -224,7 +226,7 @@ async def generate_text_stream(prompt: str, langfuse_trace: Any = None):
                 yield chunk.content
 
         latency_ms = int((time.time() - start_time) * 1000)
-        
+
         # Update generation with final output
         if generation:
             try:
@@ -246,7 +248,7 @@ async def generate_text_stream(prompt: str, langfuse_trace: Any = None):
         else:
             logger.error("[LLM Stream] Error", exc_info=True)
             error_msg = f"\\n\\n[Error: {str(e)}]"
-        
+
         if generation:
             try:
                 generation.end(
@@ -256,5 +258,5 @@ async def generate_text_stream(prompt: str, langfuse_trace: Any = None):
                 )
             except Exception:
                 pass
-        
+
         yield error_msg

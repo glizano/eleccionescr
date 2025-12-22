@@ -28,6 +28,7 @@ select = [
 ignore = [
     "E501",  # line too long (handled by formatter)
     "B008",  # do not perform function calls in argument defaults (FastAPI Depends)
+    "SIM105",  # contextlib.suppress suggestion (explicit try-except preferred for readability)
 ]
 
 # Allow autofix for all enabled rules

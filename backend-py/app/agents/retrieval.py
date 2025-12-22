@@ -13,9 +13,7 @@ from app.services.qdrant import search_qdrant
 logger = logging.getLogger(__name__)
 
 
-def search_specific_party(
-    question: str, party_abbr: str, langfuse_trace: Any = None
-) -> list:
+def search_specific_party(question: str, party_abbr: str, langfuse_trace: Any = None) -> list:
     """
     Strategy 1: Search for specific topic within a party's plan.
 
@@ -48,9 +46,7 @@ def search_specific_party(
                     output={
                         "num_results": len(contexts),
                         "avg_score": (
-                            sum(c.score for c in contexts) / len(contexts)
-                            if contexts
-                            else 0
+                            sum(c.score for c in contexts) / len(contexts) if contexts else 0
                         ),
                         "scores": [c.score for c in contexts[:5]],
                     }
@@ -61,9 +57,7 @@ def search_specific_party(
     return contexts
 
 
-def search_general_party_plan(
-    question: str, party_abbr: str, langfuse_trace: Any = None
-) -> list:
+def search_general_party_plan(question: str, party_abbr: str, langfuse_trace: Any = None) -> list:
     """
     Strategy 2: Search for comprehensive overview of a party's plan.
 
@@ -96,9 +90,7 @@ def search_general_party_plan(
                     output={
                         "num_results": len(contexts),
                         "avg_score": (
-                            sum(c.score for c in contexts) / len(contexts)
-                            if contexts
-                            else 0
+                            sum(c.score for c in contexts) / len(contexts) if contexts else 0
                         ),
                         "scores": [c.score for c in contexts[:5]],
                     }
@@ -192,9 +184,7 @@ def search_general_comparison(question: str, langfuse_trace: Any = None) -> list
                         "parties_covered": covered,
                         "parties_missing": missing,
                         "avg_score": (
-                            sum(c.score for c in contexts) / len(contexts)
-                            if contexts
-                            else 0
+                            sum(c.score for c in contexts) / len(contexts) if contexts else 0
                         ),
                         "party_distribution": {
                             party: len([c for c in contexts if c.payload.get("partido") == party])
@@ -238,9 +228,7 @@ def search_default(question: str, langfuse_trace: Any = None) -> list:
                         "num_results": len(contexts),
                         "parties_found": sorted(parties_found),
                         "avg_score": (
-                            sum(c.score for c in contexts) / len(contexts)
-                            if contexts
-                            else 0
+                            sum(c.score for c in contexts) / len(contexts) if contexts else 0
                         ),
                         "scores": [c.score for c in contexts[:5]],
                     }

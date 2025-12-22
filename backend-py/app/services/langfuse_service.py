@@ -119,11 +119,11 @@ def create_generation(
             "output": output_text,
             "metadata": metadata if metadata is not None else {},
         }
-        
+
         # Add usage information if provided
         if usage:
             generation_kwargs["usage"] = usage
-        
+
         generation = trace.generation(**generation_kwargs)
         return generation
     except Exception as e:

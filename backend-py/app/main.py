@@ -216,23 +216,23 @@ async def ask_stream(ask_request: AskRequest, request: Request):
 async def submit_feedback(feedback: FeedbackRequest, request: Request):
     """
     Submit user feedback for a specific trace.
-    
+
     This helps track real-world quality and user satisfaction.
-    
+
     Args:
         feedback: FeedbackRequest with trace_id, score, and optional comment
-    
+
     Returns:
         Success status
     """
     try:
         from app.services.langfuse_service import score_trace
-        
+
         logger.info(
             f"[API] Feedback received for trace {feedback.trace_id}: "
             f"score={feedback.score}, comment={feedback.comment[:50] if feedback.comment else 'None'}"
         )
-        
+
         # Score the trace in Langfuse
         success = score_trace(
             trace_id=feedback.trace_id,
@@ -240,19 +240,19 @@ async def submit_feedback(feedback: FeedbackRequest, request: Request):
             value=feedback.score,
             comment=feedback.comment,
         )
-        
+
         if not success:
             logger.warning(f"[API] Failed to score trace {feedback.trace_id}")
             return {
                 "success": False,
                 "message": "Langfuse is not enabled or scoring failed",
             }
-        
+
         return {
             "success": True,
             "message": "Feedback received successfully",
         }
-        
+
     except Exception as e:
         logger.error(f"[API] Error submitting feedback: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error submitting feedback: {str(e)}") from e

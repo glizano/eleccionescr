@@ -82,47 +82,48 @@ def test_score_trace():
 
 def test_llm_generate_text_creates_generation():
     """Test that generate_text creates a Langfuse generation."""
-    from unittest.mock import ANY
 
-    with patch("app.services.llm.get_llm") as mock_get_llm:
-        with patch("app.services.llm.get_llm_circuit_breaker") as mock_cb:
-            with patch("app.services.llm._invoke_llm_with_timeout") as mock_invoke:
-                # Setup mocks
-                mock_llm = MagicMock()
-                mock_llm.model_name = "gpt-4"
-                mock_get_llm.return_value = mock_llm
+    with (
+        patch("app.services.llm.get_llm") as mock_get_llm,
+        patch("app.services.llm.get_llm_circuit_breaker") as mock_cb,
+        patch("app.services.llm._invoke_llm_with_timeout") as mock_invoke,
+    ):
+        # Setup mocks
+        mock_llm = MagicMock()
+        mock_llm.model_name = "gpt-4"
+        mock_get_llm.return_value = mock_llm
 
-                mock_circuit_breaker = MagicMock()
-                mock_circuit_breaker.call = lambda func, callable_func: callable_func()
-                mock_cb.return_value = mock_circuit_breaker
+        mock_circuit_breaker = MagicMock()
+        mock_circuit_breaker.call = lambda func, callable_func: callable_func()
+        mock_cb.return_value = mock_circuit_breaker
 
-                # Mock the invoke to return response
-                mock_invoke.return_value = "Test response"
+        # Mock the invoke to return response
+        mock_invoke.return_value = "Test response"
 
-                # Create mock trace with generation
-                mock_trace = MagicMock()
-                mock_generation = MagicMock()
-                mock_trace.generation.return_value = mock_generation
+        # Create mock trace with generation
+        mock_trace = MagicMock()
+        mock_generation = MagicMock()
+        mock_trace.generation.return_value = mock_generation
 
-                from app.services.llm import generate_text
+        from app.services.llm import generate_text
 
-                # Call with trace
-                result = generate_text("Test prompt", langfuse_trace=mock_trace)
+        # Call with trace
+        result = generate_text("Test prompt", langfuse_trace=mock_trace)
 
-                assert result == "Test response"
+        assert result == "Test response"
 
-                # Verify generation was created
-                mock_trace.generation.assert_called_once()
-                call_kwargs = mock_trace.generation.call_args[1]
-                assert call_kwargs["name"] == "llm_generation"
-                assert call_kwargs["model"] == "gpt-4"
-                assert call_kwargs["input"] == "Test prompt"
+        # Verify generation was created
+        mock_trace.generation.assert_called_once()
+        call_kwargs = mock_trace.generation.call_args[1]
+        assert call_kwargs["name"] == "llm_generation"
+        assert call_kwargs["model"] == "gpt-4"
+        assert call_kwargs["input"] == "Test prompt"
 
-                # Verify generation.end was called with output
-                mock_generation.end.assert_called_once()
-                end_kwargs = mock_generation.end.call_args[1]
-                assert end_kwargs["output"] == "Test response"
-                assert "latency_ms" in end_kwargs["metadata"]
+        # Verify generation.end was called with output
+        mock_generation.end.assert_called_once()
+        end_kwargs = mock_generation.end.call_args[1]
+        assert end_kwargs["output"] == "Test response"
+        assert "latency_ms" in end_kwargs["metadata"]
 
 
 def test_feedback_request_model():
@@ -138,7 +139,7 @@ def test_feedback_request_model():
     # Score validation (should be 0-1)
     try:
         FeedbackRequest(trace_id="test-id", score=1.5)
-        assert False, "Should have raised validation error"
+        raise AssertionError("Should have raised validation error")
     except Exception:
         pass  # Expected
 
@@ -149,15 +150,13 @@ def test_feedback_request_model():
 
 def test_ask_response_includes_trace_id():
     """Test that AskResponse includes trace_id."""
-    from app.models import AskResponse, AgentTrace
+    from app.models import AgentTrace, AskResponse
 
     response = AskResponse(
         answer="Test answer",
         sources=[],
         cached=False,
-        agent_trace=AgentTrace(
-            intent="test", parties_detected=[], chunks_retrieved=0, steps=[]
-        ),
+        agent_trace=AgentTrace(intent="test", parties_detected=[], chunks_retrieved=0, steps=[]),
         session_id="test-session",
         trace_id="test-trace-id",
     )
