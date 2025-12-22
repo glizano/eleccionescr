@@ -62,8 +62,9 @@
   // Get backend URL from environment variable
   const BACKEND_URL = import.meta.env.PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-  // Conversation history for context-aware responses
-  let conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [];
+  // Generate a unique session ID for this browser session
+  // This enables conversational memory via the backend's checkpointer
+  const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
   // Fetch rate limit configuration on load
   async function loadRateLimits() {
@@ -104,7 +105,7 @@
     const streamingMsgId = addStreamingMessage();
 
     try {
-      // 3. Call streaming API with EventSource
+      // 3. Call streaming API with session_id for conversational memory
       const response = await fetch(`${BACKEND_URL}/api/ask/stream`, {
         method: "POST",
         headers: {
@@ -112,7 +113,7 @@
         },
         body: JSON.stringify({
           question,
-          last_messages: conversationHistory.slice(-4),
+          session_id: sessionId,
         }),
       });
 
@@ -178,13 +179,8 @@
       // 5. Finalize the message (remove cursor and add metadata if available)
       finalizeStreamingMessage(streamingMsgId, accumulatedText, metadata);
 
-      // 6. Update conversation history
-      conversationHistory.push({ role: "user", content: question });
-      conversationHistory.push({ role: "assistant", content: accumulatedText });
-
-      if (conversationHistory.length > 10) {
-        conversationHistory = conversationHistory.slice(-10);
-      }
+      // Note: Conversation history is now managed by the backend's checkpointer
+      // No need to track it on the frontend anymore
     } catch (error) {
       console.error(error);
       removeMessage(streamingMsgId);

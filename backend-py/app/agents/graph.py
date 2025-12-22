@@ -1,6 +1,7 @@
 import logging
 from typing import Any, TypedDict
 
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
 from app.agents.classifier import classify_intent, extract_parties
@@ -233,7 +234,7 @@ def route_by_intent(state: AgentState) -> str:
 
 
 def build_agent_graph():
-    """Build the LangGraph agent workflow"""
+    """Build the LangGraph agent workflow with checkpointer for conversational memory"""
 
     # Create graph
     workflow = StateGraph(AgentState)
@@ -268,8 +269,9 @@ def build_agent_graph():
     workflow.add_edge("metadata_query", END)  # Metadata queries end directly
     workflow.add_edge("rate_limited", END)
 
-    # Compile
-    return workflow.compile()
+    # Compile with MemorySaver for basic conversational memory
+    memory = MemorySaver()
+    return workflow.compile(checkpointer=memory)
 
 
 # Create the compiled graph
@@ -284,8 +286,8 @@ def run_agent(
 
     Args:
         question: The user's question
-        session_id: Optional session ID for tracking
-        conversation_history: Optional context from previous messages
+        session_id: Optional session ID for tracking and checkpointing
+        conversation_history: Optional context from previous messages (deprecated, use session_id)
 
     Returns: Final state with answer, sources, and trace
     """
@@ -312,8 +314,11 @@ def run_agent(
             "conversation_history": conversation_history,
         }
 
-        # Run the graph
-        final_state = agent_graph.invoke(initial_state)
+        # Configure checkpointer to use session_id as thread_id for memory persistence
+        config = {"configurable": {"thread_id": session_id or "default"}}
+
+        # Run the graph with checkpointer
+        final_state = agent_graph.invoke(initial_state, config=config)
 
         # Update Langfuse trace with final workflow results (for analytics/debugging)
         if trace:
