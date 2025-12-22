@@ -31,6 +31,7 @@ User Question
 - ✅ **RAG contextual**: Búsquedas filtradas cuando es apropiado
 - ✅ **Trazabilidad completa**: Cada respuesta incluye el trace del agente
 - ✅ **LangChain + LangGraph**: Orquestación profesional de agentes
+- ✅ **Memoria conversacional**: Checkpointer integrado para mantener contexto entre preguntas
 - ✅ **100% local**: No requiere servicios externos para desarrollo
 
 ## 🚀 Setup
@@ -193,6 +194,34 @@ Genera respuesta final con:
 - Citas de fuentes
 - Formato estructurado
 - Validación de información
+
+### Conversational Memory (Checkpointer)
+
+El sistema usa **MemorySaver** de LangGraph para mantener contexto conversacional:
+
+- **Persistencia por sesión**: Cada `session_id` mantiene su propio historial de estado
+- **Continuidad**: Preguntas de seguimiento pueden referirse a interacciones previas
+- **Aislamiento**: Diferentes sesiones mantienen contextos separados
+- **En memoria**: El checkpointer actual almacena estado en memoria (no persistente entre reinicios)
+
+Ejemplo de uso con sesión:
+
+```bash
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "¿Qué propone el PLN sobre educación?",
+    "session_id": "user-123"
+  }'
+
+# Pregunta de seguimiento en la misma sesión
+curl -X POST http://localhost:8000/api/ask \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "¿Y sobre salud?",
+    "session_id": "user-123"
+  }'
+```
 
 ## 🔧 Configuración
 
@@ -427,6 +456,6 @@ Ver [`.github/workflows/README_BACKEND.md`](../../.github/workflows/README_BACKE
 
 - [ ] Integrar LangSmith para visualización de traces
 - [ ] Agregar agent de fact-checking
-- [ ] Implementar memoria conversacional
+- [x] Implementar memoria conversacional (MemorySaver checkpointer)
 - [ ] Cache con Redis
 - [ ] Métricas de accuracy por agente
