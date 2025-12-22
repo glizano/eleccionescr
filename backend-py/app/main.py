@@ -11,7 +11,7 @@ from slowapi.util import get_remote_address
 
 from app.agents.graph import run_agent
 from app.config import settings
-from app.models import AgentTrace, AskRequest, AskResponse, Source
+from app.models import AgentTrace, AskRequest, AskResponse, FeedbackRequest, Source
 from app.services.langfuse_service import shutdown_langfuse
 
 # Configure logging
@@ -123,6 +123,7 @@ async def ask(ask_request: AskRequest, request: Request):
                 steps=result["steps"],
             ),
             session_id=ask_request.session_id,
+            trace_id=result.get("trace_id"),
         )
 
         logger.info("[API] Response generated successfully")
@@ -208,3 +209,50 @@ async def ask_stream(ask_request: AskRequest, request: Request):
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/feedback")
+@limiter.limit(f"{settings.max_requests_per_minute}/minute")
+async def submit_feedback(feedback: FeedbackRequest, request: Request):
+    """
+    Submit user feedback for a specific trace.
+    
+    This helps track real-world quality and user satisfaction.
+    
+    Args:
+        feedback: FeedbackRequest with trace_id, score, and optional comment
+    
+    Returns:
+        Success status
+    """
+    try:
+        from app.services.langfuse_service import score_trace
+        
+        logger.info(
+            f"[API] Feedback received for trace {feedback.trace_id}: "
+            f"score={feedback.score}, comment={feedback.comment[:50] if feedback.comment else 'None'}"
+        )
+        
+        # Score the trace in Langfuse
+        success = score_trace(
+            trace_id=feedback.trace_id,
+            name="user_feedback",
+            value=feedback.score,
+            comment=feedback.comment,
+        )
+        
+        if not success:
+            logger.warning(f"[API] Failed to score trace {feedback.trace_id}")
+            return {
+                "success": False,
+                "message": "Langfuse is not enabled or scoring failed",
+            }
+        
+        return {
+            "success": True,
+            "message": "Feedback received successfully",
+        }
+        
+    except Exception as e:
+        logger.error(f"[API] Error submitting feedback: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error submitting feedback: {str(e)}") from e
