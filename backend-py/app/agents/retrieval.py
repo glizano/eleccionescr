@@ -245,7 +245,7 @@ def search_default(question: str, langfuse_trace: Any = None) -> list:
                         "scores": [c.score for c in contexts[:5]],
                     }
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to update span: {e}")
 
     return contexts
