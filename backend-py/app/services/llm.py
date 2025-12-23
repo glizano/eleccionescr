@@ -14,6 +14,7 @@ from app.config import settings
 from app.services.circuit_breaker import CircuitBreakerOpenError, get_llm_circuit_breaker
 from app.services.llm_providers import get_llm_provider
 from app.services.retry import is_resource_exhausted_error, retry_with_exponential_backoff
+from app.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
     """
     llm = get_llm()
     model_name = getattr(llm, "model_name", type(llm).__name__)
-    logger.info(f"[LLM] Using model: {model_name}")
+    logger.info(f"[LLM] Using model: {sanitize_for_log(model_name)}")
 
     # Create Langfuse generation for LLM call tracking
     generation = None
@@ -197,7 +198,7 @@ async def generate_text_stream(prompt: str, langfuse_trace: Any = None):
     """
     llm = get_llm()
     model_name = getattr(llm, "model_name", type(llm).__name__)
-    logger.info(f"[LLM Stream] Using model: {model_name}")
+    logger.info(f"[LLM Stream] Using model: {sanitize_for_log(model_name)}")
 
     # Create Langfuse generation for streaming LLM call
     generation = None

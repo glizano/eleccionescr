@@ -12,6 +12,7 @@ from app.party_metadata import (
 )
 from app.services.llm import get_llm
 from app.services.retry import is_resource_exhausted_error
+from app.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ def classify_intent(question: str, conversation_history: str | None = None) -> s
         structured_llm = llm.with_structured_output(IntentClassification)
         result = structured_llm.invoke(prompt)
 
-        logger.info(f"Intent classified as: {result.intent}")
+        logger.info(f"Intent classified as: {sanitize_for_log(result.intent)}")
         return result.intent
 
     except Exception as e:
@@ -133,7 +134,9 @@ def extract_parties(question: str) -> list[str]:
         valid_parties = [p for p in result.parties if p in KNOWN_PARTIES]
 
         if valid_parties:
-            logger.info(f"Extracted parties: {valid_parties}")
+            # Sanitize party list for logging
+            safe_parties = [sanitize_for_log(p) for p in valid_parties]
+            logger.info(f"Extracted parties: {safe_parties}")
         else:
             logger.info("No parties detected in question")
 

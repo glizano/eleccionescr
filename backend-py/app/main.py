@@ -13,6 +13,7 @@ from app.agents.graph import run_agent
 from app.config import settings
 from app.models import AgentTrace, AskRequest, AskResponse, FeedbackRequest, Source
 from app.services.langfuse_service import shutdown_langfuse
+from app.utils.logging import sanitize_for_log
 
 # Configure logging
 logging.basicConfig(
@@ -90,7 +91,7 @@ async def ask(ask_request: AskRequest, request: Request):
     Public endpoint - no authentication required.
     """
     try:
-        logger.info(f"[API] Question received: {ask_request.question[:100]}...")
+        logger.info(f"[API] Question received: {sanitize_for_log(ask_request.question[:100])}...")
 
         # Build conversation history from last messages if provided
         conversation_history = None
@@ -168,7 +169,9 @@ async def ask_stream(ask_request: AskRequest, request: Request):
 
     async def generate_stream():
         try:
-            logger.info(f"[API Stream] Question received: {ask_request.question[:100]}...")
+            logger.info(
+                f"[API Stream] Question received: {sanitize_for_log(ask_request.question[:100])}..."
+            )
 
             # Build conversation history
             conversation_history = None
@@ -242,7 +245,7 @@ async def submit_feedback(feedback: FeedbackRequest, request: Request):
         )
 
         if not success:
-            logger.warning(f"[API] Failed to score trace {feedback.trace_id}")
+            logger.warning(f"[API] Failed to score trace {sanitize_for_log(feedback.trace_id)}")
             return {
                 "success": False,
                 "message": "Langfuse is not enabled or scoring failed",

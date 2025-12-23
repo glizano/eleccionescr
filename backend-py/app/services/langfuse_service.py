@@ -7,6 +7,7 @@ from functools import lru_cache
 from typing import Any
 
 from app.config import settings
+from app.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +245,9 @@ def score_trace(
             value=value,
             comment=comment,
         )
-        logger.info(f"Scored trace {trace_id} with {name}={value}")
+        logger.info(
+            f"Scored trace {sanitize_for_log(trace_id)} with {sanitize_for_log(name)}={value}"
+        )
         return True
     except Exception as e:
         logger.error(f"Error scoring trace: {e}")

@@ -9,6 +9,7 @@ from app.config import settings
 from app.party_metadata import PARTIES_METADATA
 from app.services.embeddings import generate_embedding
 from app.services.qdrant import search_qdrant
+from app.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def search_specific_party(question: str, party_abbr: str, langfuse_trace: Any = 
 
     Returns focused chunks from the specified party.
     """
-    logger.info(f"[Retrieval] Specific topic for party: {party_abbr}")
+    logger.info(f"[Retrieval] Specific topic for party: {sanitize_for_log(party_abbr)}")
 
     from app.services.langfuse_service import langfuse_span
 
@@ -63,7 +64,7 @@ def search_general_party_plan(question: str, party_abbr: str, langfuse_trace: An
 
     Returns more chunks to provide a complete picture.
     """
-    logger.info(f"[Retrieval] General plan overview for party: {party_abbr}")
+    logger.info(f"[Retrieval] General plan overview for party: {sanitize_for_log(party_abbr)}")
 
     from app.services.langfuse_service import langfuse_span
 

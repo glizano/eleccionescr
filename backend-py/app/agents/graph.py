@@ -16,6 +16,7 @@ from app.config import settings
 from app.party_metadata import CANDIDATE_TO_PARTY, PARTIES_METADATA, PARTY_NAME_TO_ABBR
 from app.services.langfuse_service import langfuse_trace
 from app.services.llm import generate_text
+from app.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -179,13 +180,13 @@ def generate_response_node(state: AgentState) -> AgentState:
 
         try:
             logger.info(f"[Agent] Invoking LLM with {len(state['contexts'])} contexts...")
-            logger.info(f"[Agent] Intent: {state['intent']}")
+            logger.info(f"[Agent] Intent: {sanitize_for_log(state['intent'])}")
 
             # Pass Langfuse trace to LLM for observability
             answer = generate_text(prompt, langfuse_trace=trace)
 
             logger.info(f"[Agent] Generated answer length: {len(answer)}")
-            logger.info(f"[Agent] Answer preview: {answer[:200]}")
+            logger.info(f"[Agent] Answer preview: {sanitize_for_log(answer[:200])}")
 
             # Extract sources
             sources = []
@@ -311,7 +312,7 @@ def metadata_query_node(state: AgentState) -> AgentState:
 
         answer = "\n".join(answer_parts)
 
-        logger.info(f"[Agent] Metadata answer generated: {answer[:100]}...")
+        logger.info(f"[Agent] Metadata answer generated: {sanitize_for_log(answer[:100])}...")
 
         if span:
             try:
@@ -403,7 +404,7 @@ def run_agent(
     """
     import hashlib
 
-    logger.info(f"[Agent] Starting workflow for question: {question[:100]}...")
+    logger.info(f"[Agent] Starting workflow for question: {sanitize_for_log(question[:100])}...")
 
     # Generate anonymous user_id from session_id for analytics
     user_id = None
