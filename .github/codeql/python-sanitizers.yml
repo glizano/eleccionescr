@@ -3,6 +3,5 @@ extensions:
       pack: codeql/python-all
       extensible: sanitizerModel
     data:
-      # Sanitize log injection through sanitize_for_log function
-      # Format: [namespace, type, subtypes, name, signature, ext, input, kind, provenance]
-      - ["app.utils.logging", "", False, "sanitize_for_log", "", "", "ReturnValue", "log-injection", "manual"]
+      # Sanitize log injection - the return value of sanitize_for_log is safe
+      - ["app.utils.logging", "", False, "sanitize_for_log", "()", "", "ReturnValue", "log-injection", "manual"]
