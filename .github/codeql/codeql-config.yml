@@ -1,0 +1,8 @@
+name: "CodeQL Config"
+
+queries:
+  - uses: security-extended
+
+# Custom data extensions to recognize sanitize_for_log as a sanitizer
+extensions:
+  - .github/codeql/python-sanitizers.yml

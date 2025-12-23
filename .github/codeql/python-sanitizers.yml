@@ -1,0 +1,8 @@
+extensions:
+  - addsTo:
+      pack: codeql/python-all
+      extensible: sanitizerModel
+    data:
+      # Sanitize log injection through sanitize_for_log function
+      # This function removes control characters that could be used for log injection
+      - ["app.utils.logging", "sanitize_for_log", "Argument[0]", "log-injection", "manual"]
