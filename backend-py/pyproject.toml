@@ -16,7 +16,7 @@ dependencies = [
     "langchain-qdrant>=0.2.1",
     "langchain-openai>=0.2.0",
     "langchain-google-genai>=2.0.0",
-    "langfuse>=2.0.0,<4.0.0",
+    "langfuse>=2.0.0,<3.0.0",  # Pinned to v2.x - v3.x has breaking API changes (client.trace() removed)
     "slowapi>=0.1.9",
 ]
 
