@@ -34,7 +34,7 @@ def get_langfuse_client():
         logger.info(f"Langfuse client initialized with host: {settings.langfuse_host}")
         return client
     except Exception as e:
-        logger.error(f"Failed to initialize Langfuse client: {e}")
+        logger.error(f"Failed to initialize Langfuse client: {sanitize_for_log(str(e))}")
         return None
 
 
@@ -80,7 +80,7 @@ def langfuse_trace(
         )
         yield trace
     except Exception as e:
-        logger.error(f"Error creating Langfuse trace: {e}")
+        logger.error(f"Error creating Langfuse trace: {sanitize_for_log(str(e))}")
         yield None
 
 
@@ -128,7 +128,7 @@ def create_generation(
         generation = trace.generation(**generation_kwargs)
         return generation
     except Exception as e:
-        logger.error(f"Error creating Langfuse generation: {e}")
+        logger.error(f"Error creating Langfuse generation: {sanitize_for_log(str(e))}")
         return None
 
 
@@ -173,7 +173,7 @@ def langfuse_span(
         if span:
             span.end()
     except Exception as e:
-        logger.error(f"Error creating Langfuse span: {e}")
+        logger.error(f"Error creating Langfuse span: {sanitize_for_log(str(e))}")
         yield None
 
 
@@ -212,7 +212,7 @@ def create_event(
         )
         return event
     except Exception as e:
-        logger.error(f"Error creating Langfuse event: {e}")
+        logger.error(f"Error creating Langfuse event: {sanitize_for_log(str(e))}")
         return None
 
 
@@ -250,7 +250,7 @@ def score_trace(
         )
         return True
     except Exception as e:
-        logger.error(f"Error scoring trace: {e}")
+        logger.error(f"Error scoring trace: {sanitize_for_log(str(e))}")
         return False
 
 
@@ -263,4 +263,4 @@ def shutdown_langfuse():
             client.shutdown()
             logger.info("Langfuse client shutdown successfully")
         except Exception as e:
-            logger.warning(f"Error shutting down Langfuse client: {e}")
+            logger.warning(f"Error shutting down Langfuse client: {sanitize_for_log(str(e))}")

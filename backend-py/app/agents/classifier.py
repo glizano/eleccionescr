@@ -102,7 +102,7 @@ def classify_intent(question: str, conversation_history: str | None = None) -> s
             )
             return "rate_limited"
 
-        logger.error(f"Error classifying intent: {e}")
+        logger.error(f"Error classifying intent: {sanitize_for_log(str(e))}")
         return "unclear"
 
 
@@ -148,5 +148,5 @@ def extract_parties(question: str) -> list[str]:
             )
             return []
 
-        logger.error(f"Error extracting parties: {e}")
+        logger.error(f"Error extracting parties: {sanitize_for_log(str(e))}")
         return []

@@ -131,7 +131,7 @@ async def ask(ask_request: AskRequest, request: Request):
         return response
 
     except Exception as e:
-        logger.error(f"[API] Error: {str(e)}", exc_info=True)
+        logger.error(f"[API] Error: {sanitize_for_log(str(e))}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
 
@@ -208,7 +208,7 @@ async def ask_stream(ask_request: AskRequest, request: Request):
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
         except Exception as e:
-            logger.error(f"[API Stream] Error: {str(e)}", exc_info=True)
+            logger.error(f"[API Stream] Error: {sanitize_for_log(str(e))}", exc_info=True)
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")
@@ -232,8 +232,8 @@ async def submit_feedback(feedback: FeedbackRequest, request: Request):
         from app.services.langfuse_service import score_trace
 
         logger.info(
-            f"[API] Feedback received for trace {feedback.trace_id}: "
-            f"score={feedback.score}, comment={feedback.comment[:50] if feedback.comment else 'None'}"
+            f"[API] Feedback received for trace {sanitize_for_log(feedback.trace_id)}: "
+            f"score={feedback.score}, comment={sanitize_for_log(feedback.comment[:50]) if feedback.comment else 'None'}"
         )
 
         # Score the trace in Langfuse
@@ -257,5 +257,5 @@ async def submit_feedback(feedback: FeedbackRequest, request: Request):
         }
 
     except Exception as e:
-        logger.error(f"[API] Error submitting feedback: {str(e)}", exc_info=True)
+        logger.error(f"[API] Error submitting feedback: {sanitize_for_log(str(e))}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error submitting feedback: {str(e)}") from e

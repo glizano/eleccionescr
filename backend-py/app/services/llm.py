@@ -126,12 +126,12 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
                     },
                 )
             except Exception as e:
-                logger.warning(f"Failed to update Langfuse generation: {e}")
+                logger.warning(f"Failed to update Langfuse generation: {sanitize_for_log(str(e))}")
 
         return response_text
 
     except CircuitBreakerOpenError as e:
-        logger.error(f"[LLM] Circuit breaker open: {e}")
+        logger.error(f"[LLM] Circuit breaker open: {sanitize_for_log(str(e))}")
         error_msg = (
             "El servicio de IA está temporalmente no disponible. Intenta de nuevo en un minuto."
         )
@@ -149,7 +149,7 @@ def generate_text(prompt: str, langfuse_trace: Any = None) -> str:
         return error_msg
 
     except TimeoutError as e:
-        logger.error(f"[LLM] Request timeout: {e}")
+        logger.error(f"[LLM] Request timeout: {sanitize_for_log(str(e))}")
         error_msg = f"La solicitud tomó demasiado tiempo ({settings.llm_timeout_seconds}s). Intenta con una pregunta más corta."
 
         if generation:
@@ -240,7 +240,7 @@ async def generate_text_stream(prompt: str, langfuse_trace: Any = None):
                     },
                 )
             except Exception as e:
-                logger.warning(f"Failed to update Langfuse generation: {e}")
+                logger.warning(f"Failed to update Langfuse generation: {sanitize_for_log(str(e))}")
 
     except Exception as e:
         if is_resource_exhausted_error(e):

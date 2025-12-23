@@ -235,6 +235,6 @@ def search_default(question: str, langfuse_trace: Any = None) -> list:
                     }
                 )
             except Exception as e:
-                logger.warning(f"Failed to update span: {e}")
+                logger.warning(f"Failed to update span: {sanitize_for_log(str(e))}")
 
     return contexts

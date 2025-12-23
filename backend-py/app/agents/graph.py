@@ -221,7 +221,7 @@ def generate_response_node(state: AgentState) -> AgentState:
             }
 
         except Exception as e:
-            logger.error(f"[Agent] Error generating response: {e}", exc_info=True)
+            logger.error(f"[Agent] Error generating response: {sanitize_for_log(str(e))}", exc_info=True)
 
             if span:
                 try:
@@ -471,7 +471,7 @@ def run_agent(
                     tags=tags,
                 )
             except Exception as e:
-                logger.warning(f"Failed to update Langfuse trace: {e}")
+                logger.warning(f"Failed to update Langfuse trace: {sanitize_for_log(str(e))}")
 
     logger.info(f"[Agent] Workflow completed. Steps: {final_state['steps']}")
 
@@ -605,7 +605,7 @@ async def run_agent_stream(
                     tags=tags,
                 )
             except Exception as e:
-                logger.warning(f"Failed to update Langfuse trace: {e}")
+                logger.warning(f"Failed to update Langfuse trace: {sanitize_for_log(str(e))}")
 
         # Send metadata at the end
         yield {
