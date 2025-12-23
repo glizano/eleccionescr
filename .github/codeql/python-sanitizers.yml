@@ -1,7 +1,16 @@
 extensions:
   - addsTo:
       pack: codeql/python-all
+      extensible: summaryModel
+    data:
+      # Define sanitize_for_log as a value-preserving summary (taint flows through but is sanitized)
+      # Format: [namespace, type, subtypes, name, signature, ext, input, output, kind, provenance]
+      - ["app.utils.logging", "", False, "sanitize_for_log", "(String)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+  
+  - addsTo:
+      pack: codeql/python-all
       extensible: sanitizerModel
     data:
-      # Sanitize log injection - the return value of sanitize_for_log is safe
-      - ["app.utils.logging", "", False, "sanitize_for_log", "()", "", "ReturnValue", "log-injection", "manual"]
+      # Mark the return value of sanitize_for_log as sanitized against log injection
+      # Format: [namespace, type, subtypes, name, signature, ext, input, kind, provenance]
+      - ["app.utils.logging", "", False, "sanitize_for_log", "(String)", "", "ReturnValue", "log-injection", "manual"]
