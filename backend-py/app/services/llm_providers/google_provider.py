@@ -6,6 +6,8 @@ import logging
 
 from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
 
+from app.utils.logging import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 # Map config string to LangChain enum
@@ -55,5 +57,7 @@ def create_google_chat_model(
         safety_settings=safety_settings,
     )
 
-    logger.info(f"Created Google Gemini chat model: {model}, safety: {safety_threshold}")
+    logger.info(
+        f"Created Google Gemini chat model: {sanitize_for_log(model)}, safety: {sanitize_for_log(safety_threshold)}"
+    )
     return chat_model

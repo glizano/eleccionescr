@@ -38,3 +38,12 @@ class AskResponse(BaseModel):
     cached: bool = False
     agent_trace: AgentTrace | None = None
     session_id: str | None = None
+    trace_id: str | None = None  # For feedback tracking
+
+
+class FeedbackRequest(BaseModel):
+    """Request model for user feedback"""
+
+    trace_id: str = Field(..., description="Langfuse trace ID to score")
+    score: float = Field(..., ge=0, le=1, description="Feedback score (0-1)")
+    comment: str | None = Field(None, max_length=500, description="Optional feedback comment")

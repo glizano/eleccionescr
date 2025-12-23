@@ -12,6 +12,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_openai import OpenAIEmbeddings
 
 from app.config import settings
+from app.utils.logging import sanitize_for_log
 
 # Import HuggingFace only if available (dev dependency)
 try:
@@ -42,7 +43,9 @@ def get_embedding_provider() -> Embeddings:
             model=model_name,
             api_key=settings.openai_api_key,
         )
-        logger.info(f"Initialized OpenAI embeddings provider with model: {model_name}")
+        logger.info(
+            f"Initialized OpenAI embeddings provider with model: {sanitize_for_log(model_name)}"
+        )
         return embeddings
     else:
         # Default to HuggingFace (sentence-transformers) if available
@@ -57,7 +60,9 @@ def get_embedding_provider() -> Embeddings:
                 "Use EMBEDDING_PROVIDER=openai or install dev dependencies."
             )
         embeddings = HuggingFaceEmbeddings(model_name=model_name)
-        logger.info(f"Initialized HuggingFace embeddings provider with model: {model_name}")
+        logger.info(
+            f"Initialized HuggingFace embeddings provider with model: {sanitize_for_log(model_name)}"
+        )
         return embeddings
 
 

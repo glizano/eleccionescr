@@ -6,6 +6,8 @@ import logging
 
 from langchain_openai import ChatOpenAI
 
+from app.utils.logging import sanitize_for_log
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,5 +29,5 @@ def create_openai_chat_model(api_key: str, model: str = "gpt-4o-mini") -> ChatOp
         max_tokens=2048,
     )
 
-    logger.info(f"Created OpenAI chat model: {model}")
+    logger.info(f"Created OpenAI chat model: {sanitize_for_log(model)}")
     return chat_model

@@ -8,6 +8,7 @@ from collections.abc import Callable
 from typing import Any, TypeVar
 
 from app.config import settings
+from app.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,9 @@ def retry_with_exponential_backoff(
 
             # Only retry on rate limit errors
             if not is_resource_exhausted_error(e):
-                logger.debug(f"Non-retryable error on attempt {attempt + 1}: {e}")
+                logger.debug(
+                    f"Non-retryable error on attempt {attempt + 1}: {sanitize_for_log(str(e))}"
+                )
                 raise
 
             # Don't sleep on last attempt

@@ -11,6 +11,7 @@ from typing import Literal
 from langchain_core.language_models import BaseChatModel
 
 from app.config import settings
+from app.utils.logging import sanitize_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ def create_llm_provider(provider_type: LLMProviderType | None = None) -> BaseCha
     if provider_type is None:
         provider_type = settings.llm_provider
 
-    logger.info(f"Creating LLM provider: {provider_type}")
+    logger.info(f"Creating LLM provider: {sanitize_for_log(provider_type)}")
 
     if provider_type == "google":
         if not settings.google_api_key:

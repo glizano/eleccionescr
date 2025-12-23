@@ -11,8 +11,9 @@ from slowapi.util import get_remote_address
 
 from app.agents.graph import run_agent
 from app.config import settings
-from app.models import AgentTrace, AskRequest, AskResponse, Source
+from app.models import AgentTrace, AskRequest, AskResponse, FeedbackRequest, Source
 from app.services.langfuse_service import shutdown_langfuse
+from app.utils.logging import sanitize_for_log
 
 # Configure logging
 logging.basicConfig(
@@ -90,7 +91,7 @@ async def ask(ask_request: AskRequest, request: Request):
     Public endpoint - no authentication required.
     """
     try:
-        logger.info(f"[API] Question received: {ask_request.question[:100]}...")
+        logger.info(f"[API] Question received (length: {len(ask_request.question)} chars)")
 
         # Build conversation history from last messages if provided
         conversation_history = None
@@ -123,13 +124,14 @@ async def ask(ask_request: AskRequest, request: Request):
                 steps=result["steps"],
             ),
             session_id=ask_request.session_id,
+            trace_id=result.get("trace_id"),
         )
 
         logger.info("[API] Response generated successfully")
         return response
 
     except Exception as e:
-        logger.error(f"[API] Error: {str(e)}", exc_info=True)
+        logger.error(f"[API] Error: {sanitize_for_log(str(e))}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
 
@@ -167,7 +169,9 @@ async def ask_stream(ask_request: AskRequest, request: Request):
 
     async def generate_stream():
         try:
-            logger.info(f"[API Stream] Question received: {ask_request.question[:100]}...")
+            logger.info(
+                f"[API Stream] Question received (length: {len(ask_request.question)} chars)"
+            )
 
             # Build conversation history
             conversation_history = None
@@ -204,7 +208,53 @@ async def ask_stream(ask_request: AskRequest, request: Request):
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
         except Exception as e:
-            logger.error(f"[API Stream] Error: {str(e)}", exc_info=True)
+            logger.error(f"[API Stream] Error: {sanitize_for_log(str(e))}", exc_info=True)
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(generate_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/feedback")
+@limiter.limit(f"{settings.max_requests_per_minute}/minute")
+async def submit_feedback(feedback: FeedbackRequest, request: Request):
+    """
+    Submit user feedback for a specific trace.
+
+    This helps track real-world quality and user satisfaction.
+
+    Args:
+        feedback: FeedbackRequest with trace_id, score, and optional comment
+
+    Returns:
+        Success status
+    """
+    try:
+        from app.services.langfuse_service import score_trace
+
+        logger.info(
+            f"[API] Feedback received with has_comment={feedback.comment is not None and len(feedback.comment) > 0}"
+        )
+
+        # Score the trace in Langfuse
+        success = score_trace(
+            trace_id=feedback.trace_id,
+            name="user_feedback",
+            value=feedback.score,
+            comment=feedback.comment,
+        )
+
+        if not success:
+            logger.warning("[API] Failed to score trace in Langfuse")
+            return {
+                "success": False,
+                "message": "Langfuse is not enabled or scoring failed",
+            }
+
+        return {
+            "success": True,
+            "message": "Feedback received successfully",
+        }
+
+    except Exception as e:
+        logger.error(f"[API] Error submitting feedback: {sanitize_for_log(str(e))}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error submitting feedback: {str(e)}") from e

@@ -1,0 +1,7 @@
+name: eleccionescr/python-customizations
+version: 0.0.1
+library: true
+dependencies:
+  codeql/python-all: "*"
+dataExtensions:
+  - python-sanitizers.yml
