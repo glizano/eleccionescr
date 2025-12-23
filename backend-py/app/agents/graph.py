@@ -221,7 +221,9 @@ def generate_response_node(state: AgentState) -> AgentState:
             }
 
         except Exception as e:
-            logger.error(f"[Agent] Error generating response: {sanitize_for_log(str(e))}", exc_info=True)
+            logger.error(
+                f"[Agent] Error generating response: {sanitize_for_log(str(e))}", exc_info=True
+            )
 
             if span:
                 try:
@@ -404,9 +406,7 @@ def run_agent(
     """
     import hashlib
 
-    logger.info(
-        f"[Agent] Starting workflow (question length: {len(question)} chars)"
-    )
+    logger.info(f"[Agent] Starting workflow (question length: {len(question)} chars)")
 
     # Generate anonymous user_id from session_id for analytics
     user_id = None

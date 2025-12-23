@@ -169,7 +169,9 @@ async def ask_stream(ask_request: AskRequest, request: Request):
 
     async def generate_stream():
         try:
-            logger.info(f"[API Stream] Question received (length: {len(ask_request.question)} chars)")
+            logger.info(
+                f"[API Stream] Question received (length: {len(ask_request.question)} chars)"
+            )
 
             # Build conversation history
             conversation_history = None

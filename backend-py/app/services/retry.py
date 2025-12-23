@@ -76,9 +76,10 @@ def extract_retry_delay(error: Exception) -> float | None:
             # Google API returns retry delay in metadata
             details = getattr(error, "details", [])
             for detail in details:
-                if isinstance(detail, dict) and detail.get(
-                    "@type"
-                ) == "type.googleapis.com/google.rpc.RetryInfo":
+                if (
+                    isinstance(detail, dict)
+                    and detail.get("@type") == "type.googleapis.com/google.rpc.RetryInfo"
+                ):
                     retry_delay = detail.get("retryDelay", "")
                     if retry_delay:
                         # Parse delay like "52s"
@@ -133,7 +134,9 @@ def retry_with_exponential_backoff(
 
             # Only retry on rate limit errors
             if not is_resource_exhausted_error(e):
-                logger.debug(f"Non-retryable error on attempt {attempt + 1}: {sanitize_for_log(str(e))}")
+                logger.debug(
+                    f"Non-retryable error on attempt {attempt + 1}: {sanitize_for_log(str(e))}"
+                )
                 raise
 
             # Don't sleep on last attempt
