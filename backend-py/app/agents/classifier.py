@@ -134,9 +134,8 @@ def extract_parties(question: str) -> list[str]:
         valid_parties = [p for p in result.parties if p in KNOWN_PARTIES]
 
         if valid_parties:
-            # Sanitize party list for logging
-            safe_parties = [sanitize_for_log(p) for p in valid_parties]
-            logger.info(f"Extracted parties: {safe_parties}")
+            # No sanitization needed - parties come from controlled KNOWN_PARTIES set
+            logger.info(f"Extracted parties: {valid_parties}")
         else:
             logger.info("No parties detected in question")
 

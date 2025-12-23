@@ -50,7 +50,8 @@ def sanitize_for_log(value: str | None) -> str:
 
     # Replace newlines, carriage returns, and other control characters
     # This prevents log injection by removing characters that could break log format
-    value = re.sub(r"[\n\r\t\x00-\x1f\x7f-\x9f]", " ", value)
+    # Only removes C0 control characters (0x00-0x1F) and DEL (0x7F)
+    value = re.sub(r"[\n\r\t\x00-\x1f\x7f]", " ", value)
 
     # Replace multiple spaces with single space
     value = re.sub(r"\s+", " ", value)
