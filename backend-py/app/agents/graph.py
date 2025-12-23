@@ -404,7 +404,7 @@ def run_agent(
     """
     import hashlib
 
-    logger.info(f"[Agent] Starting workflow for question: {sanitize_for_log(question[:100])}...")
+    logger.info(f"[Agent] Starting workflow (question length: {len(question)} chars)")
 
     # Generate anonymous user_id from session_id for analytics
     user_id = None

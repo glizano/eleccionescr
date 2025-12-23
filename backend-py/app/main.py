@@ -91,7 +91,7 @@ async def ask(ask_request: AskRequest, request: Request):
     Public endpoint - no authentication required.
     """
     try:
-        logger.info(f"[API] Question received: {sanitize_for_log(ask_request.question[:100])}...")
+        logger.info(f"[API] Question received (length: {len(ask_request.question)} chars)")
 
         # Build conversation history from last messages if provided
         conversation_history = None
@@ -169,9 +169,7 @@ async def ask_stream(ask_request: AskRequest, request: Request):
 
     async def generate_stream():
         try:
-            logger.info(
-                f"[API Stream] Question received: {sanitize_for_log(ask_request.question[:100])}..."
-            )
+            logger.info(f"[API Stream] Question received (length: {len(ask_request.question)} chars)")
 
             # Build conversation history
             conversation_history = None
@@ -232,8 +230,8 @@ async def submit_feedback(feedback: FeedbackRequest, request: Request):
         from app.services.langfuse_service import score_trace
 
         logger.info(
-            f"[API] Feedback received for trace {sanitize_for_log(feedback.trace_id)}: "
-            f"score={feedback.score}, comment={sanitize_for_log(feedback.comment[:50]) if feedback.comment else 'None'}"
+            f"[API] Feedback received: score={feedback.score}, "
+            f"has_comment={feedback.comment is not None and len(feedback.comment) > 0}"
         )
 
         # Score the trace in Langfuse
@@ -245,7 +243,7 @@ async def submit_feedback(feedback: FeedbackRequest, request: Request):
         )
 
         if not success:
-            logger.warning(f"[API] Failed to score trace {sanitize_for_log(feedback.trace_id)}")
+            logger.warning("[API] Failed to score trace in Langfuse")
             return {
                 "success": False,
                 "message": "Langfuse is not enabled or scoring failed",

@@ -245,9 +245,7 @@ def score_trace(
             value=value,
             comment=comment,
         )
-        logger.info(
-            f"Scored trace {sanitize_for_log(trace_id)} with {sanitize_for_log(name)}={value}"
-        )
+        logger.info(f"Scored trace in Langfuse with score_name={name}, value={value}")
         return True
     except Exception as e:
         logger.error(f"Error scoring trace: {sanitize_for_log(str(e))}")
