@@ -230,7 +230,7 @@ async def submit_feedback(feedback: FeedbackRequest, request: Request):
         from app.services.langfuse_service import score_trace
 
         logger.info(
-            f"[API] Feedback received: score={feedback.score}, "
+            f"[API] Feedback received with "
             f"has_comment={feedback.comment is not None and len(feedback.comment) > 0}"
         )
 
