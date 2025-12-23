@@ -76,10 +76,9 @@ def extract_retry_delay(error: Exception) -> float | None:
             # Google API returns retry delay in metadata
             details = getattr(error, "details", [])
             for detail in details:
-                if (
-                    isinstance(detail, dict)
-                    and detail.get("@type") == "type.googleapis.com/google.rpc.RetryInfo"
-                ):
+                if isinstance(detail, dict) and detail.get(
+                    "@type"
+                ) == "type.googleapis.com/google.rpc.RetryInfo":
                     retry_delay = detail.get("retryDelay", "")
                     if retry_delay:
                         # Parse delay like "52s"
