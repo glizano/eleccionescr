@@ -1,7 +1,5 @@
 """Tests for logging utilities with security safeguards."""
 
-import pytest
-
 from app.utils.logging import sanitize_for_log
 
 
